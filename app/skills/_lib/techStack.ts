@@ -33,18 +33,18 @@ export const techStackSections: TechStackSection[] = [
   {
     id: "ci",
     category: "CI/CD",
-    title: "継続的インテグレーション",
+    title: "CI/CD",
     description:
-      "GitHub Actionsでmainブランチへのpush・PRごとにNext.js側・Go側それぞれのlint/build/testを自動実行しています。",
-    items: ["GitHub Actions", "ESLint", "go vet", "go test"],
+      "GitHub Actionsでmainブランチへのpush・PRごとにNext.js側・Go側それぞれのlint/build/testを自動実行しています。mainへのマージ後はDockerイメージのビルド・GHCRへのpush・Lightsailインスタンスへのデプロイまで自動で行われます。",
+    items: ["GitHub Actions", "ESLint", "go vet", "go test", "GHCR"],
   },
   {
     id: "infra",
     category: "INFRASTRUCTURE",
     title: "インフラ / デプロイ",
     description:
-      "AWS Lightsail Instance（VPS）1台の上で、Next.js・Go API・MySQL・リバースプロキシをDocker Composeでまとめて動かしています。マネージドサービスに分散させるより、VPS運用そのものを経験することを優先した構成です。",
-    items: ["AWS Lightsail", "Docker Compose", "Caddy", "Let's Encrypt"],
+      "AWS Lightsail Instance（VPS）1台の上で、Next.js・Go API・MySQL・リバースプロキシをDocker Composeでまとめて動かしています。マネージドサービスに分散させるより、VPS運用そのものを経験することを優先した構成です。問い合わせフォームのメール転送のみAWS SESを利用しています。",
+    items: ["AWS Lightsail", "Docker Compose", "Caddy", "Let's Encrypt", "AWS SES"],
   },
 ];
 
