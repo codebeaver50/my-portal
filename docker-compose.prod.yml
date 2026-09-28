@@ -21,6 +21,7 @@
 #   MYSQL_ROOT_PASSWORD=...
 #   MYSQL_PASSWORD=...
 #   CRON_SECRET=...
+#   ADMIN_PASSWORD=...  # ポートフォリオ共通の管理者ログイン用（未設定だと常にログイン失敗）
 #   READ_ONLY=true   # 公開デモを読み取り専用にする場合のみ設定（POST/PUT/PATCH/DELETEを403で拒否）
 #   CONTACT_SMTP_HOST=...      # Contactフォーム送信用（AWS SESのSMTPインターフェース想定）
 #   CONTACT_SMTP_PORT=...
@@ -66,6 +67,7 @@ services:
       DATABASE_URL: mysql://app:${MYSQL_PASSWORD}@tcp(mysql:3306)/my_portal
       ALLOWED_ORIGIN: https://${DOMAIN}
       CRON_SECRET: ${CRON_SECRET}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       READ_ONLY: ${READ_ONLY:-false}
       GIN_MODE: release
       CONTACT_SMTP_HOST: ${CONTACT_SMTP_HOST}
