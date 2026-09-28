@@ -17,5 +17,18 @@ services:
       timeout: 3s
       retries: 20
 
+  # ローカルでContactフォームのメール送信をテストするためのSMTPキャッチャー。
+  # 実際には外部に送信せず、Web UI（http://localhost:8025）で受信内容を確認できる。
+  # server/.env.example の CONTACT_SMTP_* をこのコンテナ向けに設定して使う。
+  mailpit:
+    image: axllent/mailpit:v1
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH: contact:contact
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   mysql_data:
