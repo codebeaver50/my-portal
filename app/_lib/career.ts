@@ -56,7 +56,7 @@ export const careerMilestones: CareerMilestone[] = [
 ];
 
 export const personalInterests: string[] = [
-  "筋トレ: 週3回ほどジムに通っており、ベンチプレスは100kg挙げられます。",
+  "筋トレ: 週3回ほどジムに通っています。",
   "オンラインゲーム: FF14のライトプレイヤーです。",
   "沖縄旅行: 毎年沖縄へ旅行しています。",
   "ブラスバンド: 中学・高校で所属し、トランペットとトロンボーンを担当していました。",
