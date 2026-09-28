@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/matsutoba/my-portal/server/internal/admin"
+	"github.com/matsutoba/my-portal/server/internal/contact"
 	"github.com/matsutoba/my-portal/server/internal/db"
 	bookdatabaserouter "github.com/matsutoba/my-portal/server/internal/features/bookdatabase/router"
 	simplecmsrouter "github.com/matsutoba/my-portal/server/internal/features/simplecms/router"
@@ -60,6 +61,7 @@ func main() {
 	engine.GET("/health", handleHealth)
 	apiGroup := engine.Group("/api")
 	admin.RegisterRoutes(apiGroup)
+	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn)
 	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn)

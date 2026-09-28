@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Card, CardDescription, CardHeader, CardTitle, LinkButton, PageContainer, PageHeader } from "@/components/ui";
-import { contactInfo } from "../_lib/profile";
+import { Card, CardDescription, CardHeader, CardTitle, PageContainer, PageHeader, ToastProvider } from "@/components/ui";
+import { ContactForm } from "./_components/ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact | Code Beaver",
@@ -25,14 +25,12 @@ export default function ContactPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>連絡先</CardTitle>
-          <CardDescription>下記のいずれかからご連絡ください。</CardDescription>
+          <CardTitle>問い合わせフォーム</CardTitle>
+          <CardDescription>下記フォームからのご連絡はメールで受け取ります。</CardDescription>
         </CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <LinkButton href={contactInfo.x} variant="accent" className="w-auto" target="_blank" rel="noopener noreferrer">
-            Xでメッセージを送る
-          </LinkButton>
-        </div>
+        <ToastProvider>
+          <ContactForm />
+        </ToastProvider>
       </Card>
     </PageContainer>
   );
