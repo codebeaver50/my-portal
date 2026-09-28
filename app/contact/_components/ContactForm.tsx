@@ -13,6 +13,7 @@ export function ContactForm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [isSent, setIsSent] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,9 +28,7 @@ export function ContactForm() {
     setIsPending(true);
     try {
       await sendContactMessage(parsed.data);
-      setName("");
-      setEmail("");
-      setMessage("");
+      setIsSent(true);
       showToast("お問い合わせを送信しました");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "送信に失敗しました", "error");
@@ -38,14 +37,26 @@ export function ContactForm() {
     }
   }
 
+  function handleReset() {
+    setName("");
+    setEmail("");
+    setMessage("");
+    setIsSent(false);
+  }
+
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      {isSent ? (
+        <p className="rounded-lg border border-success/30 bg-success-bg px-4 py-3 text-sm text-success">
+          送信しました。内容は下記の通りです。
+        </p>
+      ) : null}
       <Input
         id="contact-name"
         label="お名前"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        disabled={isPending}
+        disabled={isPending || isSent}
         required
       />
       <Input
@@ -54,7 +65,7 @@ export function ContactForm() {
         type="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
-        disabled={isPending}
+        disabled={isPending || isSent}
         required
       />
       <Textarea
@@ -63,13 +74,19 @@ export function ContactForm() {
         rows={6}
         value={message}
         onChange={(event) => setMessage(event.target.value)}
-        disabled={isPending}
+        disabled={isPending || isSent}
         required
       />
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      <Button type="submit" variant="accent" className="w-auto" disabled={isPending}>
-        {isPending ? "送信中..." : "送信する"}
-      </Button>
+      {isSent ? (
+        <Button type="button" variant="secondary" className="w-auto" onClick={handleReset}>
+          別の内容を送る
+        </Button>
+      ) : (
+        <Button type="submit" variant="accent" className="w-auto" disabled={isPending}>
+          {isPending ? "送信中..." : "送信する"}
+        </Button>
+      )}
     </form>
   );
 }
