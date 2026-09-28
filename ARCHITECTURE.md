@@ -122,7 +122,7 @@ server/
 
 - `.github/workflows/ci.yml`: `main`へのpush・PRで lint / build / go vet / go test を実行する
 - `.github/workflows/deploy.yml`: CIが`main`で成功したことを`workflow_run`で検知し、以下を自動実行する
-  1. ルートの`Dockerfile`（web）・`server/Dockerfile`（api）をビルドし、GHCR（`ghcr.io/matsutoba/my-portal-web` / `ghcr.io/matsutoba/my-portal-api`）に`latest`とコミットSHAタグでpush
+  1. ルートの`Dockerfile`（web）・`server/Dockerfile`（api）をビルドし、GHCR（`ghcr.io/codebeaver50/my-portal-web` / `ghcr.io/codebeaver50/my-portal-api`）に`latest`とコミットSHAタグでpush
   2. GitHub ActionsからSSHでLightsailインスタンスに接続し、`git pull` → `docker compose pull` → `run --rm migrate up` → `up -d` を実行
   - Lightsailインスタンス自身ではビルドを行わない（メモリが小さいVPSでのビルドによるOOM・デプロイ時間の増加を避けるため）。`docker-compose.prod.yml`の`api`/`web`は`image:`でGHCRのイメージを参照しつつ、`build:`も残しているため手動でのローカルビルドも可能
   - GHCRのパッケージ（`my-portal-web` / `my-portal-api`）は初回push後に **Public** に設定しておく。Privateのままだと、Lightsail側で`docker login ghcr.io`が必要になる

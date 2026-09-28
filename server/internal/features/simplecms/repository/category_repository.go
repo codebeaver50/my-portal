@@ -6,7 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // CategoryRepository は simple_cms_categories テーブルにアクセスする。

@@ -9,9 +9,9 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/ndl"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/ndl"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // fakeNDLClient は NDLClient をネットワークアクセスなしで差し替える。

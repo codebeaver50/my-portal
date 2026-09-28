@@ -5,8 +5,8 @@ package service
 import (
 	"context"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/repository"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/repository"
 )
 
 // ChartOfAccountsService は GET /api/simple-ledger/chart-of-accounts を実装する。

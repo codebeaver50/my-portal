@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/service"
 )
 
 // BookController は GET /api/books とそのカバー画像プロキシを実装する。

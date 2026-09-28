@@ -5,7 +5,7 @@ package dto
 import (
 	"time"
 
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // ChartOfAccountResponse は勘定科目1件分。

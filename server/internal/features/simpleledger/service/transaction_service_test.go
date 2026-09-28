@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 func newTransactionService(t *testing.T) (TransactionService, uint, uint) {

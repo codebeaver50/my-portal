@@ -13,7 +13,7 @@
 # migrateサービスは常時起動させたくないので、`up`の対象から明示的に外し、
 # 実行したいときだけ `run --rm migrate up|down` で呼び出す。
 #
-# GHCRのパッケージ（ghcr.io/matsutoba/my-portal-web, -api）は初回push後に
+# GHCRのパッケージ（ghcr.io/codebeaver50/my-portal-web, -api）は初回push後に
 # Public に設定しておくこと（Lightsail側でdocker loginせずにpullできるようにするため）。
 #
 # .env.prod（git管理しない）に以下を定義する:
@@ -58,7 +58,7 @@ services:
       retries: 20
 
   api:
-    image: ghcr.io/matsutoba/my-portal-api:latest
+    image: ghcr.io/codebeaver50/my-portal-api:latest
     build:
       context: ./server
     restart: unless-stopped
@@ -80,7 +80,7 @@ services:
 
   # DBマイグレーション用。常時起動はさせず、必要なときだけ `run --rm migrate up|down` で叩く
   migrate:
-    image: ghcr.io/matsutoba/my-portal-api:latest
+    image: ghcr.io/codebeaver50/my-portal-api:latest
     build:
       context: ./server
     entrypoint: ["/usr/local/bin/migrate"]
@@ -91,7 +91,7 @@ services:
         condition: service_healthy
 
   web:
-    image: ghcr.io/matsutoba/my-portal-web:latest
+    image: ghcr.io/codebeaver50/my-portal-web:latest
     build:
       context: .
       args:

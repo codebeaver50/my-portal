@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/admin"
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/controller"
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/repository"
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/service"
+	"github.com/codebeaver50/my-portal/server/internal/admin"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/controller"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/repository"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/service"
 )
 
 // SetupSimpleCmsRoutes は simple cms feature のルートをapiGroup配下に

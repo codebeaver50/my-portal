@@ -5,7 +5,7 @@ package dto
 import (
 	"time"
 
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // CategoryRequest はカテゴリの作成/更新リクエスト。

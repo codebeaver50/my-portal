@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // ErrPostNotFound は指定のIDの記事が存在しない場合に返される。

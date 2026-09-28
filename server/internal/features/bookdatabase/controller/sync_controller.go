@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/service"
 )
 
 // SyncController は GET/POST /api/books/sync バッチエンドポイントを実装する。

@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/controller"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/repository"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/controller"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/repository"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/service"
 )
 
 // SetupBookRoutes は book database feature のルートをapiGroup配下に登録

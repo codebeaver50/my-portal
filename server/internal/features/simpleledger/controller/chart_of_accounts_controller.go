@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/service"
 )
 
 // ChartOfAccountsController は GET /api/simple-ledger/chart-of-accounts を実装する。

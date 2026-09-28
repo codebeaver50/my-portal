@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 func TestBookService_List_EmptyDB(t *testing.T) {

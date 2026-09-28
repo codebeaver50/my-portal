@@ -7,9 +7,9 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // ErrTransactionNotFound は指定のIDの取引が存在しない場合に返される。

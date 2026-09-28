@@ -1,4 +1,4 @@
-module github.com/matsutoba/my-portal/server
+module github.com/codebeaver50/my-portal/server
 
 go 1.25.4
 
