@@ -48,6 +48,9 @@ func main() {
 	// されている）バッチ更新、/api/admin/* とsimple-cmsのカテゴリ・記事の書き込み
 	// 系はadmin.AuthMiddleware/ログイン処理自体で保護されているため、どちらも
 	// ユーザー操作を止めるREAD_ONLYの対象外にする（管理者は本番でも操作できる）。
+	// /api/contact は認可のない公開エンドポイントだが、DB/デモデータを一切変更
+	// せずメール転送するだけなので、READ_ONLYが保護したい対象（シードデータ）に
+	// 当たらず対象外にする。
 	engine.Use(readOnlyMiddleware(readOnly,
 		"/api/books/sync",
 		"/api/admin/login",
@@ -56,6 +59,7 @@ func main() {
 		"/api/simple-cms/categories/:id",
 		"/api/simple-cms/posts",
 		"/api/simple-cms/posts/:id",
+		"/api/contact",
 	))
 
 	engine.GET("/health", handleHealth)
