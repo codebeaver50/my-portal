@@ -1,15 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  LinkButton,
-  PageContainer,
-  PageHeader,
-  ToastProvider,
-} from "@/components/ui";
-import { contactInfo } from "../_lib/profile";
+import { Card, CardDescription, CardHeader, CardTitle, PageContainer, PageHeader, ToastProvider } from "@/components/ui";
 import { ContactForm } from "./_components/ContactForm";
 
 export const metadata: Metadata = {
@@ -41,18 +31,6 @@ export default function ContactPage() {
         <ToastProvider>
           <ContactForm />
         </ToastProvider>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>その他の連絡先</CardTitle>
-          <CardDescription>フォーム以外では下記からもご連絡いただけます。</CardDescription>
-        </CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <LinkButton href={contactInfo.x} variant="accent" className="w-auto" target="_blank" rel="noopener noreferrer">
-            Xでメッセージを送る
-          </LinkButton>
-        </div>
       </Card>
     </PageContainer>
   );
