@@ -22,6 +22,12 @@
 #   MYSQL_PASSWORD=...
 #   CRON_SECRET=...
 #   READ_ONLY=true   # 公開デモを読み取り専用にする場合のみ設定（POST/PUT/PATCH/DELETEを403で拒否）
+#   CONTACT_SMTP_HOST=...      # Contactフォーム送信用（AWS SESのSMTPインターフェース想定）
+#   CONTACT_SMTP_PORT=...
+#   CONTACT_SMTP_USERNAME=...
+#   CONTACT_SMTP_PASSWORD=...
+#   CONTACT_FROM_EMAIL=...     # SESで検証済みの送信元アドレス
+#   CONTACT_TO_EMAIL=...       # 問い合わせを転送したい受信先アドレス
 #
 # Lightsailインスタンスの（静的）IPアドレスが変わったときの手順:
 #   1. Lightsailコンソールでインスタンスの現在のパブリックIPを確認する
@@ -62,6 +68,12 @@ services:
       CRON_SECRET: ${CRON_SECRET}
       READ_ONLY: ${READ_ONLY:-false}
       GIN_MODE: release
+      CONTACT_SMTP_HOST: ${CONTACT_SMTP_HOST}
+      CONTACT_SMTP_PORT: ${CONTACT_SMTP_PORT}
+      CONTACT_SMTP_USERNAME: ${CONTACT_SMTP_USERNAME}
+      CONTACT_SMTP_PASSWORD: ${CONTACT_SMTP_PASSWORD}
+      CONTACT_FROM_EMAIL: ${CONTACT_FROM_EMAIL}
+      CONTACT_TO_EMAIL: ${CONTACT_TO_EMAIL}
     depends_on:
       mysql:
         condition: service_healthy
