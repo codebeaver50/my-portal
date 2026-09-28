@@ -1,6 +1,14 @@
 import { Card, CardDescription, CardHeader, CardTitle, Grid, LinkButton, PageContainer, TechTag } from "@/components/ui";
 import { CaseStudyCard } from "./_components/CaseStudyCard";
-import { careerSummary, currentFocus, foundationSkills, heroCopy, reasons, supportItems } from "./_lib/profile";
+import {
+  careerSummary,
+  consultationExamples,
+  currentFocus,
+  foundationSkills,
+  heroCopy,
+  reasons,
+  supportItems,
+} from "./_lib/profile";
 import { caseStudies } from "./_lib/works";
 
 const HIGHLIGHTED_CASE_STUDY_IDS = ["talent-management-frontend", "seminar-cms"];
@@ -32,6 +40,29 @@ export default function Home() {
       </section>
 
       <section className="flex flex-col gap-6 pb-8">
+        <h2 className="text-2xl font-extrabold tracking-tight">対応できること</h2>
+        <Grid columns={2}>
+          {supportItems.map((item) => (
+            <Card key={item.title}>
+              <CardHeader>
+                <CardTitle>{item.title}</CardTitle>
+                <CardDescription>{item.description}</CardDescription>
+              </CardHeader>
+            </Card>
+          ))}
+        </Grid>
+        <h3 className="text-lg font-bold">こんなご相談に対応します</h3>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {consultationExamples.map((example) => (
+            <li key={example} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <span className="mt-1.5 size-1.5 flex-none rounded-full bg-accent" aria-hidden />
+              {example}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="flex flex-col gap-6 pb-8">
         <h2 className="text-2xl font-extrabold tracking-tight">選ばれる理由</h2>
         <Grid columns={3}>
           {reasons.map((reason) => (
@@ -55,18 +86,6 @@ export default function Home() {
         <LinkButton href="/works" variant="secondary" className="w-auto">
           その他のWorksを見る
         </LinkButton>
-      </section>
-
-      <section className="flex flex-col gap-6 pb-8">
-        <h2 className="text-2xl font-extrabold tracking-tight">提供できる支援</h2>
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {supportItems.map((item) => (
-            <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <span className="mt-1.5 size-1.5 flex-none rounded-full bg-accent" aria-hidden />
-              {item}
-            </li>
-          ))}
-        </ul>
       </section>
 
       <section className="flex flex-col gap-6 pb-8">
