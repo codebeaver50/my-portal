@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/controller"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/repository"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/controller"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/repository"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/service"
 )
 
 // SetupSimpleLedgerRoutes は simple ledger feature のルートをapiGroup配下に

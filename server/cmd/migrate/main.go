@@ -12,7 +12,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/mysql"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 
-	"github.com/matsutoba/my-portal/server/migrations"
+	"github.com/codebeaver50/my-portal/server/migrations"
 )
 
 func main() {

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/ndl"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/openbd"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/ndl"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/openbd"
 )
 
 // NDLClient は SyncService が依存するNDL Search SRU APIの操作を抽象化する。

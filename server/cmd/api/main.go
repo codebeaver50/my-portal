@@ -8,12 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/admin"
-	"github.com/matsutoba/my-portal/server/internal/contact"
-	"github.com/matsutoba/my-portal/server/internal/db"
-	bookdatabaserouter "github.com/matsutoba/my-portal/server/internal/features/bookdatabase/router"
-	simplecmsrouter "github.com/matsutoba/my-portal/server/internal/features/simplecms/router"
-	simpleledgerrouter "github.com/matsutoba/my-portal/server/internal/features/simpleledger/router"
+	"github.com/codebeaver50/my-portal/server/internal/admin"
+	"github.com/codebeaver50/my-portal/server/internal/contact"
+	"github.com/codebeaver50/my-portal/server/internal/db"
+	bookdatabaserouter "github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/router"
+	simplecmsrouter "github.com/codebeaver50/my-portal/server/internal/features/simplecms/router"
+	simpleledgerrouter "github.com/codebeaver50/my-portal/server/internal/features/simpleledger/router"
 )
 
 func main() {

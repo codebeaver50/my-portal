@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simpleledger/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simpleledger/service"
 )
 
 func init() {

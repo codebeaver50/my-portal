@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // PageSize は元のNext.js実装のページサイズに合わせている。

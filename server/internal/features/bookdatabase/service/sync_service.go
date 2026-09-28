@@ -8,10 +8,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/ndl"
-	"github.com/matsutoba/my-portal/server/internal/features/bookdatabase/repository"
-	"github.com/matsutoba/my-portal/server/internal/models"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/ndl"
+	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/repository"
+	"github.com/codebeaver50/my-portal/server/internal/models"
 )
 
 // NDC 007: 情報科学（IT関連書籍とみなす分類）

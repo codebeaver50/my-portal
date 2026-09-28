@@ -8,8 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/dto"
-	"github.com/matsutoba/my-portal/server/internal/features/simplecms/service"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/dto"
+	"github.com/codebeaver50/my-portal/server/internal/features/simplecms/service"
 )
 
 // PostController は /api/simple-cms/posts のエンドポイントを実装する。

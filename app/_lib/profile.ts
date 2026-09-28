@@ -62,5 +62,5 @@ export const careerSummary =
 
 export const contactInfo = {
   x: "https://x.com/codebeaver50",
-  github: "https://github.com/matsutoba",
+  github: "https://github.com/codebeaver50",
 };
