@@ -157,6 +157,7 @@ server/
 - テーブル（`server/migrations/000004_create_form_builder_tables.*.sql`、シードデータとしてフォーム3件・回答17件を含む）
   - `form_builder_forms`: フォーム本体
   - `form_builder_form_fields`: 項目定義。`type`は`text` / `textarea` / `number` / `email` / `date` / `select` / `radio` / `checkbox`。`options`（JSON配列）は`select`/`radio`/`checkbox`の選択肢で、それ以外は`[]`
+    - レイアウト: `layout_row`（0始まり）が同じ項目を同じ行に横並びで表示し、行の中の並びとフォーム全体の表示順は`sort_order`で決める（行ごとに左から右）。1行あたり最大3項目で、行の中は均等割り（項目ごとの幅指定はしない）
   - `form_builder_form_records`: 回答。`data`（JSON）に`{ "<項目ID>": 値 }`の形で保存する。項目ごとに列を持たないため、フォーム定義を変更してもスキーマ変更は不要
 - API（`/api/form-builder`）
   ```
@@ -174,7 +175,12 @@ server/
   - 削除した項目の回答値は`data`内に残るが、項目定義がないため回答データ一覧には表示しない。入力形式・選択肢を変更しても既存の回答は書き換えない（編集画面に注意書きを表示）
   - **回答の検証はGo側（`service/record_service.go`）を正とする**。必須チェック・型・メール形式・`YYYY-MM-DD`・選択肢に含まれるか・未知の項目IDの混入を検証し、エラー時は`400`＋`{"error": "...", "fieldErrors": {"<項目ID>": "..."}}`を返す。フロント側（`_lib/schema.ts`）も項目定義からzodスキーマを動的に組み立てて同じ制約で事前チェックするが、制約値（文字数上限等）を変更する場合は両方を揃えること
   - checkboxの値は回答の選択順に依らず、選択肢の定義順で保存する
+  - **レイアウトのAPI表現**: 項目は表示順の平らな配列`fields[]`のまま、各項目に`row`を持たせる（行ごとの入れ子配列にはしない）。Go側（`normalizeFields`）は`row`が配列の先頭から昇順か・1行3項目以内かを検証し、行番号を0からの連番に詰めて保存する。フロント側は`_lib/layout.ts`で行ごとの配列（`FieldDraft[][]`）との変換・挿入・移動を純粋関数として扱う
 - フロントエンド（`app/(features)/form-builder/`）
-  - `/form-builder`（一覧）、`/form-builder/new`・`/[formId]/edit`（フォーム構築画面。右側にプレビュー）、`/[formId]`（回答画面）、`/[formId]/records`（回答データ一覧）
+  - `/form-builder`（一覧）、`/form-builder/new`・`/[formId]/edit`（フォーム構築画面）、`/[formId]`（回答画面。行ごとに横並び、スマホ幅では縦に積む）、`/[formId]/records`（回答データ一覧）
+  - フォーム構築画面（`_components/builder/`）はkintoneのようなドラッグ＆ドロップ式。左のパーツ（入力形式）を右のキャンバス（回答画面と同じ見た目）へドラッグして項目を追加し、配置済みの項目もドラッグで並べ替える。行と行のあいだに落とすと新しい行、行の中の項目の左右に落とすと横並びになる。項目のクリックで設定ダイアログ（項目名・入力形式・選択肢・必須、ドラッグの代替となる「前へ」「後ろへ」）を開く
+    - ドラッグ＆ドロップには**React Aria**（Adobe、`react-aria`パッケージ）の`useDrag` / `useDrop`フックのみを使う（見た目は`components/ui`のまま）。採用理由: ①キーボード（Enterで掴む→Tabで落とし先を選ぶ→Enterで置く）・スクリーンリーダーでのドラッグ操作が組み込みで用意されている、②継続的にメンテナンスされている（`@dnd-kit/core`は2024年12月以降更新が止まり後継は0.x、Atlassianのpragmatic-drag-and-dropはキーボード操作のドラッグを自前で用意する必要がある）
+    - 落とし先（`DropZone`）は全ての挿入位置に常に描画しておき、ドラッグ中かつ置ける位置だけを有効にする（無効な間は`aria-hidden`・クリック不可）。各落とし先には「2行目の「氏名」の右に挿入」のような読み上げ用ラベルを付ける。満員（3項目）の行や、置いても配置が変わらない位置は無効にする
+    - 注意: React Aria はドラッグ開始時の処理を`requestAnimationFrame`で行うため、タブが非表示（`document.visibilityState === "hidden"`）だとキーボードでのドラッグが始まらない。ブラウザ自動操作でテストする際はタブを前面に出すこと
   - `[formId]`配下のページはServer Componentで`_lib/getForm.ts`（Reactの`cache`で`generateMetadata`とページ本体の取得をまとめる）からフォームを取得し、不正なID・存在しないフォームは`notFound()`にする。一覧・回答・削除等の操作はTanStack Query（`_lib/useForms.ts`）
-  - 共通UIとして`components/ui/`に`Checkbox` / `Radio`と、`Button`の`danger`バリアント（削除確認用）を追加した
+  - 共通UIとして`components/ui/`に`Checkbox` / `Radio`と、`Button`の`danger`バリアント（削除確認用）を追加した。`Modal`には`role="dialog"`・`aria-modal`・タイトルとの関連付けと、Escキーで閉じる処理を追加した
