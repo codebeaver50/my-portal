@@ -11,15 +11,18 @@ import (
 // FormFieldRequest はフォーム項目1件分の作成/更新リクエスト。
 // ID が指定された場合は既存項目の更新、未指定の場合は新規項目として扱う。
 // 既存項目のIDを保つことで、回答データ（項目IDをキーに保存）との対応を維持する。
+// Row が同じ項目は同じ行に横並びで表示する（1行あたり最大3項目）。
 type FormFieldRequest struct {
 	ID       *uint            `json:"id"`
 	Label    string           `json:"label" binding:"required,max=100"`
 	Type     models.FieldType `json:"type" binding:"required,oneof=text textarea number email date select radio checkbox"`
 	Required bool             `json:"required"`
 	Options  []string         `json:"options"`
+	Row      int              `json:"row" binding:"min=0"`
 }
 
-// FormRequest はフォームの作成/更新リクエスト。Fields の並び順がそのまま表示順になる。
+// FormRequest はフォームの作成/更新リクエスト。Fields の並び順がそのまま表示順
+// （行ごとに左から右）になるため、Row は配列の先頭から昇順に並んでいる必要がある。
 type FormRequest struct {
 	Title       string             `json:"title" binding:"required,max=100"`
 	Description string             `json:"description" binding:"max=500"`
@@ -33,6 +36,7 @@ type FormFieldResponse struct {
 	Type     models.FieldType `json:"type"`
 	Required bool             `json:"required"`
 	Options  []string         `json:"options"`
+	Row      int              `json:"row"`
 }
 
 // FormResponse はフォーム1件分（項目定義つき）。

@@ -9,6 +9,8 @@ CREATE TABLE form_builder_forms (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- フォームの項目定義。options は select/radio/checkbox の選択肢（文字列のJSON配列）。
+-- layout_row が同じ項目は同じ行に横並びで表示し、行の中の並び順は sort_order で決める。
+-- sort_order はフォーム全体での表示順（行ごとに左から右）で、layout_row の昇順と矛盾しない。
 CREATE TABLE form_builder_form_fields (
     id INT NOT NULL AUTO_INCREMENT,
     form_id INT NOT NULL,
@@ -16,6 +18,7 @@ CREATE TABLE form_builder_form_fields (
     type ENUM('text', 'textarea', 'number', 'email', 'date', 'select', 'radio', 'checkbox') NOT NULL,
     required BOOLEAN NOT NULL DEFAULT FALSE,
     options JSON NOT NULL,
+    layout_row INT NOT NULL DEFAULT 0,
     sort_order INT NOT NULL DEFAULT 0,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
@@ -48,22 +51,22 @@ INSERT INTO form_builder_forms (id, title, description, created_at, updated_at) 
     (2, '社内ランチ満足度アンケート', '社員食堂のメニュー改善のためのアンケートです。', DATE_SUB(NOW(3), INTERVAL 20 DAY), DATE_SUB(NOW(3), INTERVAL 20 DAY)),
     (3, '備品購入申請', '業務で必要な備品の購入を申請するフォームです。', DATE_SUB(NOW(3), INTERVAL 10 DAY), DATE_SUB(NOW(3), INTERVAL 10 DAY));
 
-INSERT INTO form_builder_form_fields (id, form_id, label, type, required, options, sort_order) VALUES
-    (1, 1, '氏名', 'text', TRUE, JSON_ARRAY(), 1),
-    (2, 1, 'メールアドレス', 'email', TRUE, JSON_ARRAY(), 2),
-    (3, 1, '参加希望日', 'date', TRUE, JSON_ARRAY(), 3),
-    (4, 1, '参加方法', 'radio', TRUE, JSON_ARRAY('会場参加', 'オンライン参加'), 4),
-    (5, 1, '興味のあるテーマ', 'checkbox', FALSE, JSON_ARRAY('Webフロントエンド', 'バックエンド', 'インフラ', 'AI・機械学習'), 5),
-    (6, 1, '質問・要望', 'textarea', FALSE, JSON_ARRAY(), 6),
-    (7, 2, '部署', 'select', TRUE, JSON_ARRAY('開発部', '営業部', '管理部', 'デザイン部'), 1),
-    (8, 2, '満足度（1〜5）', 'number', TRUE, JSON_ARRAY(), 2),
-    (9, 2, 'よく利用するメニュー', 'checkbox', FALSE, JSON_ARRAY('日替わり定食', 'カレー', '麺類', 'サラダ'), 3),
-    (10, 2, 'コメント', 'textarea', FALSE, JSON_ARRAY(), 4),
-    (11, 3, '申請者', 'text', TRUE, JSON_ARRAY(), 1),
-    (12, 3, '品名', 'text', TRUE, JSON_ARRAY(), 2),
-    (13, 3, '数量', 'number', TRUE, JSON_ARRAY(), 3),
-    (14, 3, '希望納期', 'date', FALSE, JSON_ARRAY(), 4),
-    (15, 3, '購入理由', 'textarea', TRUE, JSON_ARRAY(), 5);
+INSERT INTO form_builder_form_fields (id, form_id, label, type, required, options, layout_row, sort_order) VALUES
+    (1, 1, '氏名', 'text', TRUE, JSON_ARRAY(), 0, 1),
+    (2, 1, 'メールアドレス', 'email', TRUE, JSON_ARRAY(), 0, 2),
+    (3, 1, '参加希望日', 'date', TRUE, JSON_ARRAY(), 1, 3),
+    (4, 1, '参加方法', 'radio', TRUE, JSON_ARRAY('会場参加', 'オンライン参加'), 1, 4),
+    (5, 1, '興味のあるテーマ', 'checkbox', FALSE, JSON_ARRAY('Webフロントエンド', 'バックエンド', 'インフラ', 'AI・機械学習'), 2, 5),
+    (6, 1, '質問・要望', 'textarea', FALSE, JSON_ARRAY(), 3, 6),
+    (7, 2, '部署', 'select', TRUE, JSON_ARRAY('開発部', '営業部', '管理部', 'デザイン部'), 0, 1),
+    (8, 2, '満足度（1〜5）', 'number', TRUE, JSON_ARRAY(), 0, 2),
+    (9, 2, 'よく利用するメニュー', 'checkbox', FALSE, JSON_ARRAY('日替わり定食', 'カレー', '麺類', 'サラダ'), 1, 3),
+    (10, 2, 'コメント', 'textarea', FALSE, JSON_ARRAY(), 2, 4),
+    (11, 3, '申請者', 'text', TRUE, JSON_ARRAY(), 0, 1),
+    (12, 3, '品名', 'text', TRUE, JSON_ARRAY(), 1, 2),
+    (13, 3, '数量', 'number', TRUE, JSON_ARRAY(), 1, 3),
+    (14, 3, '希望納期', 'date', FALSE, JSON_ARRAY(), 1, 4),
+    (15, 3, '購入理由', 'textarea', TRUE, JSON_ARRAY(), 2, 5);
 
 -- サンプル回答（実行日からの相対日付で常に「直近」のデータに見えるようにする）
 INSERT INTO form_builder_form_records (form_id, data, created_at) VALUES

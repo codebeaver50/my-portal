@@ -17,6 +17,7 @@ import (
 const (
 	maxOptions      = 50
 	maxOptionLength = 100
+	maxFieldsPerRow = 3
 )
 
 // FormService はフォーム（項目定義を含む）の作成・更新・削除・取得を実装する。
@@ -47,12 +48,26 @@ func NewFormService(
 
 // normalizeFields は項目定義を検証し、前後の空白を除いたラベル・選択肢に正規化した
 // コピーを返す。選択肢を持たない入力形式の options は空にする。
+// 行番号は 0 から詰めた連番に振り直す（例: 0, 2, 2, 5 → 0, 1, 1, 2）。
 func normalizeFields(fields []dto.FormFieldRequest) ([]dto.FormFieldRequest, error) {
 	normalized := make([]dto.FormFieldRequest, len(fields))
 	seenIDs := make(map[uint]bool)
+	row, fieldsInRow := -1, 0
 
 	for i, field := range fields {
 		position := i + 1
+
+		if i > 0 && field.Row < fields[i-1].Row {
+			return nil, &ValidationError{Message: "項目は行の順に並べてください"}
+		}
+		if i == 0 || field.Row != fields[i-1].Row {
+			row++
+			fieldsInRow = 0
+		}
+		fieldsInRow++
+		if fieldsInRow > maxFieldsPerRow {
+			return nil, &ValidationError{Message: fmt.Sprintf("1行に並べられる項目は%d個までです", maxFieldsPerRow)}
+		}
 
 		if field.ID != nil {
 			if seenIDs[*field.ID] {
@@ -97,6 +112,7 @@ func normalizeFields(fields []dto.FormFieldRequest) ([]dto.FormFieldRequest, err
 			Type:     field.Type,
 			Required: field.Required,
 			Options:  options,
+			Row:      row,
 		}
 	}
 
@@ -123,6 +139,7 @@ func toFormField(formID uint, sortOrder int, field dto.FormFieldRequest) (models
 		Type:      field.Type,
 		Required:  field.Required,
 		Options:   string(options),
+		LayoutRow: field.Row,
 		SortOrder: sortOrder,
 	}, nil
 }
@@ -231,6 +248,7 @@ func (s *formService) Update(ctx context.Context, id uint, req *dto.FormRequest)
 			current.Type = next.Type
 			current.Required = next.Required
 			current.Options = next.Options
+			current.LayoutRow = next.LayoutRow
 			current.SortOrder = next.SortOrder
 			if err := fieldRepo.Update(ctx, &current); err != nil {
 				return err
@@ -316,6 +334,7 @@ func toFormResponse(form models.Form) (*dto.FormResponse, error) {
 			Type:     field.Type,
 			Required: field.Required,
 			Options:  options,
+			Row:      field.LayoutRow,
 		}
 	}
 

@@ -31,7 +31,7 @@ func sampleFormRequest() *dto.FormRequest {
 		Fields: []dto.FormFieldRequest{
 			{Label: "氏名", Type: models.TextField, Required: true},
 			{Label: "参加方法", Type: models.RadioField, Required: true, Options: []string{" 会場 ", "オンライン"}},
-			{Label: "メモ", Type: models.TextareaField, Options: []string{"無視される"}},
+			{Label: "メモ", Type: models.TextareaField, Options: []string{"無視される"}, Row: 1},
 		},
 	}
 }
@@ -65,6 +65,53 @@ func TestFormService_Create(t *testing.T) {
 		if got := result.Fields[2].Options; len(got) != 0 {
 			t.Errorf("textarea options = %v, want empty", got)
 		}
+	})
+
+	t.Run("renumbers rows to consecutive numbers", func(t *testing.T) {
+		svc, _ := newServices(t)
+
+		result, err := svc.Create(context.Background(), &dto.FormRequest{
+			Title: "フォーム",
+			Fields: []dto.FormFieldRequest{
+				{Label: "A", Type: models.TextField, Row: 2},
+				{Label: "B", Type: models.TextField, Row: 2},
+				{Label: "C", Type: models.TextField, Row: 5},
+				{Label: "D", Type: models.TextField, Row: 9},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		want := []int{0, 0, 1, 2}
+		for i, field := range result.Fields {
+			if field.Row != want[i] {
+				t.Errorf("Fields[%d].Row = %d, want %d", i, field.Row, want[i])
+			}
+		}
+	})
+
+	t.Run("rejects more than three fields in a row", func(t *testing.T) {
+		svc, _ := newServices(t)
+
+		fields := make([]dto.FormFieldRequest, maxFieldsPerRow+1)
+		for i := range fields {
+			fields[i] = dto.FormFieldRequest{Label: "項目", Type: models.TextField}
+		}
+		_, err := svc.Create(context.Background(), &dto.FormRequest{Title: "フォーム", Fields: fields})
+		assertValidationError(t, err)
+	})
+
+	t.Run("rejects rows out of order", func(t *testing.T) {
+		svc, _ := newServices(t)
+
+		_, err := svc.Create(context.Background(), &dto.FormRequest{
+			Title: "フォーム",
+			Fields: []dto.FormFieldRequest{
+				{Label: "A", Type: models.TextField, Row: 1},
+				{Label: "B", Type: models.TextField, Row: 0},
+			},
+		})
+		assertValidationError(t, err)
 	})
 
 	t.Run("rejects choice fields without options", func(t *testing.T) {
@@ -123,8 +170,8 @@ func TestFormService_Update(t *testing.T) {
 			Title: "参加申込（改）",
 			Fields: []dto.FormFieldRequest{
 				{ID: uintPtr(methodID), Label: "参加方法", Type: models.SelectField, Required: true, Options: []string{"会場", "オンライン", "未定"}},
-				{ID: uintPtr(nameID), Label: "お名前", Type: models.TextField, Required: true},
-				{Label: "メールアドレス", Type: models.EmailField},
+				{ID: uintPtr(nameID), Label: "お名前", Type: models.TextField, Required: true, Row: 1},
+				{Label: "メールアドレス", Type: models.EmailField, Row: 1},
 			},
 		})
 		if err != nil {
@@ -136,6 +183,9 @@ func TestFormService_Update(t *testing.T) {
 		}
 		if updated.Fields[0].ID != methodID || updated.Fields[0].Type != models.SelectField || len(updated.Fields[0].Options) != 3 {
 			t.Errorf("first field = %+v, want updated method field", updated.Fields[0])
+		}
+		if updated.Fields[0].Row != 0 || updated.Fields[1].Row != 1 || updated.Fields[2].Row != 1 {
+			t.Errorf("rows = %d, %d, %d, want 0, 1, 1", updated.Fields[0].Row, updated.Fields[1].Row, updated.Fields[2].Row)
 		}
 		if updated.Fields[1].ID != nameID || updated.Fields[1].Label != "お名前" {
 			t.Errorf("second field = %+v, want renamed name field", updated.Fields[1])

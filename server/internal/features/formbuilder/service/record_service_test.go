@@ -24,13 +24,13 @@ func newAllTypesForm(t *testing.T) (FormService, RecordService, uint, map[models
 		Title: "全項目",
 		Fields: []dto.FormFieldRequest{
 			{Label: "テキスト", Type: models.TextField, Required: true},
-			{Label: "複数行", Type: models.TextareaField},
-			{Label: "数値", Type: models.NumberField},
-			{Label: "メール", Type: models.EmailField},
-			{Label: "日付", Type: models.DateField},
-			{Label: "セレクト", Type: models.SelectField, Options: []string{"A", "B"}},
-			{Label: "ラジオ", Type: models.RadioField, Options: []string{"はい", "いいえ"}},
-			{Label: "チェック", Type: models.CheckboxField, Options: []string{"X", "Y", "Z"}},
+			{Label: "複数行", Type: models.TextareaField, Row: 1},
+			{Label: "数値", Type: models.NumberField, Row: 2},
+			{Label: "メール", Type: models.EmailField, Row: 3},
+			{Label: "日付", Type: models.DateField, Row: 4},
+			{Label: "セレクト", Type: models.SelectField, Options: []string{"A", "B"}, Row: 5},
+			{Label: "ラジオ", Type: models.RadioField, Options: []string{"はい", "いいえ"}, Row: 6},
+			{Label: "チェック", Type: models.CheckboxField, Options: []string{"X", "Y", "Z"}, Row: 7},
 		},
 	})
 	if err != nil {
