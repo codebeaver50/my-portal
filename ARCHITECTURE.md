@@ -133,7 +133,7 @@ server/
   - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
 - テーブル（`server/migrations/000005_create_portal_access_control_tables.*.sql`）
   - `portal_users`（`password_hash`はbcrypt）/ `portal_roles` / `portal_user_roles`（多対多）/ `portal_role_permissions`（ロール×リソース→`read`/`write`、行がなければ`none`）/ `portal_sessions`
-  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-admin` / `demo-editor` / `demo-viewer`（パスワードはいずれも `demo-pass`）を入れている
+  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-admin` / `demo-editor` / `demo-guest`（`viewer`ロール、パスワードはいずれも `demo-pass`）を入れている。ログイン画面に載せるのは `demo-guest` のログイン情報のみ
 - 権限の決まり方: ユーザーの権限は、割り当てられた全ロールとゲストロールの権限の和集合（リソースごとに最も強いもの）。未ログインの訪問者にはゲストロール（`code = 'guest'`）の権限を適用する。ゲストロールを常に含めるのは、ログインしたことで未ログインのときより権限が弱くなることがないようにするため
 - API（`/api/auth`）
   ```
@@ -142,7 +142,7 @@ server/
   GET  /session  ログイン中のユーザー（未ログインならnull）と、全リソースの権限レベルを返す
   ```
 - フロントエンド
-  - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。デモ用アカウントの一覧を載せ、選ぶとログインIDとパスワードが入力される
+  - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
   - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
   - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す。フッターの `/login`（`ADMIN_PASSWORD`方式）は置き換えまで残している
 - 設計判断

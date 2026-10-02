@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input } from "@/components/ui";
-import { demoAccounts, login } from "../../_lib/auth";
+import { demoAccount, login } from "../../_lib/auth";
 
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
@@ -26,12 +26,6 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
       setError(loginError instanceof Error ? loginError.message : "ログインに失敗しました");
       setIsPending(false);
     }
-  }
-
-  function fillDemoAccount(account: (typeof demoAccounts)[number]) {
-    setLoginId(account.loginId);
-    setPassword(account.password);
-    setError(null);
   }
 
   return (
@@ -70,33 +64,16 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         </form>
       </Card>
 
-      <section aria-labelledby="demo-accounts-heading" className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h2 id="demo-accounts-heading" className="text-sm font-bold">
-            デモ用アカウント
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            ロールごとに使える機能・操作が変わります。選ぶとログインIDとパスワードが入力されます（パスワードはいずれも
-            demo-pass）。ログインしない場合はゲストとして閲覧のみできます。
-          </p>
-        </div>
-        <ul className="flex flex-col gap-2">
-          {demoAccounts.map((account) => (
-            <li key={account.loginId}>
-              <button
-                type="button"
-                onClick={() => fillDemoAccount(account)}
-                className="flex w-full flex-col gap-0.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left text-sm transition-colors hover:bg-neutral-bg"
-              >
-                <span className="font-semibold">
-                  {account.label}
-                  <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">{account.loginId}</span>
-                </span>
-                <span className="text-xs text-muted-foreground">{account.description}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+      <section aria-labelledby="demo-accounts-heading" className="flex flex-col gap-2">
+        <h2 id="demo-accounts-heading" className="text-sm font-bold">
+          デモ用アカウント
+        </h2>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-lg border border-border bg-card px-4 py-3 text-sm">
+          <dt className="text-xs font-semibold text-muted-foreground">ログインID</dt>
+          <dd className="font-mono">{demoAccount.loginId}</dd>
+          <dt className="text-xs font-semibold text-muted-foreground">パスワード</dt>
+          <dd className="font-mono">{demoAccount.password}</dd>
+        </dl>
       </section>
     </div>
   );

@@ -115,7 +115,7 @@ INSERT INTO portal_role_permissions (role_id, resource, level) VALUES
 INSERT INTO portal_users (id, login_id, display_name, password_hash) VALUES
     (1, 'demo-admin', 'デモ管理者', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O'),
     (2, 'demo-editor', 'デモ編集者', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O'),
-    (3, 'demo-viewer', 'デモ閲覧者', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O');
+    (3, 'demo-guest', 'デモゲスト', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O');
 
 INSERT INTO portal_user_roles (user_id, role_id) VALUES
     (1, 1),

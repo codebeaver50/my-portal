@@ -72,9 +72,5 @@ export function resolveRedirectTo(value: string | string[] | undefined, fallback
   return fallback;
 }
 
-// ログイン画面に載せる、訪問者が試せるデモ用アカウント（server/migrations のシードデータと揃える）。
-export const demoAccounts = [
-  { loginId: "demo-admin", password: "demo-pass", label: "管理者", description: "すべてのfeatureの読み書きと、ユーザー・ロールの管理" },
-  { loginId: "demo-editor", password: "demo-pass", label: "編集者", description: "すべてのfeatureの読み書き" },
-  { loginId: "demo-viewer", password: "demo-pass", label: "閲覧者", description: "すべてのfeatureとアクセス管理画面の閲覧のみ" },
-] as const;
+// ログイン画面のフォームの下に載せる、訪問者が試せるデモ用アカウント（server/migrations のシードデータと揃える）。
+export const demoAccount = { loginId: "demo-guest", password: "demo-pass" } as const;
