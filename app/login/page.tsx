@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "管理者ログイン | My Portal",
 };
 
-// ?redirect=/simple-cms のように、ログイン後に戻る先をfeature側から指定できる。
+// ?redirect=/demo-portal/simple-cms のように、ログイン後に戻る先をfeature側から指定できる。
 // 外部URLへのオープンリダイレクトを避けるため "/" 始まりの相対パスのみ許可する。
 function resolveRedirectTo(value: string | string[] | undefined): string {
   if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) {
