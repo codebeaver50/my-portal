@@ -24,6 +24,21 @@ func ParseLevel(value string) Level {
 	}
 }
 
+// LookupLevel はAPIのリクエストで受け取った文字列（"none" / "read" / "write"）を Level に変換する。
+// ParseLevel と違い、それ以外の値は ok=false にする（不正な値を権限なしとして黙って受け入れないため）。
+func LookupLevel(value string) (level Level, ok bool) {
+	switch value {
+	case "none":
+		return None, true
+	case "read":
+		return Read, true
+	case "write":
+		return Write, true
+	default:
+		return None, false
+	}
+}
+
 // String はDB・APIでの文字列表現を返す。
 func (l Level) String() string {
 	switch l {
