@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
@@ -25,6 +28,22 @@ export function Modal({
   size = "medium",
   children,
 }: ModalProps) {
+  const titleId = useId();
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Escキーで閉じる。
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCloseRef.current();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -36,13 +55,18 @@ export function Modal({
         className="absolute inset-0 bg-foreground/40"
       />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         className={cn(
           "relative flex max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-lg",
           sizeClasses[size],
         )}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-bold">{title}</h2>
+          <h2 id={titleId} className="text-lg font-bold">
+            {title}
+          </h2>
           {description ? (
             <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}
