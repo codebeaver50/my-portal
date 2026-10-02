@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FormBuilder } from "../../_components/FormBuilder";
+import { FormBuilder } from "../../_components/builder/FormBuilder";
 import { FormHeader } from "../../_components/FormHeader";
 import { getForm } from "../../_lib/getForm";
 

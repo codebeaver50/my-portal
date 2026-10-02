@@ -1,28 +1,20 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Checkbox, Input, Select, Textarea, useToast } from "@/components/ui";
-import { FIELD_TYPE_LABEL, hasOptions } from "../_lib/fieldTypes";
-import { formSchema } from "../_lib/schema";
-import { useCreateForm, useUpdateForm } from "../_lib/useForms";
-import { FIELD_TYPES } from "../_lib/types";
-import { FieldInput } from "./FieldInput";
-import { ArrowDownIcon, ArrowUpIcon, PlusIcon, TrashIcon } from "./icons";
-import type { FieldType, Form, FormInput } from "../_lib/types";
-
-// FieldDraft は編集中の項目。key はReactのkey用（保存済み項目のIDとは別）、
-// 選択肢は1行1つのテキストとして編集する。
-type FieldDraft = {
-  key: string;
-  id?: number;
-  label: string;
-  type: FieldType;
-  required: boolean;
-  optionsText: string;
-};
-
-type FieldErrors = { label?: string; options?: string };
+import { Button, Card, Input, Textarea, useToast } from "@/components/ui";
+import { draftRowsFromForm, newDraft, toFieldInputs } from "../../_lib/draft";
+import { insertItem, moveItem, removeItem, stepPosition } from "../../_lib/layout";
+import { MAX_FIELDS, formSchema } from "../../_lib/schema";
+import { useCreateForm, useUpdateForm } from "../../_lib/useForms";
+import { BuilderCanvas } from "./BuilderCanvas";
+import { FieldSettingsModal } from "./FieldSettingsModal";
+import { PartsPalette } from "./PartsPalette";
+import type { FieldDraft } from "../../_lib/draft";
+import type { DropPosition } from "../../_lib/layout";
+import type { FieldType, Form } from "../../_lib/types";
+import type { FieldErrors } from "./CanvasField";
+import type { Dragging } from "./dnd";
 
 type BuilderErrors = {
   title?: string;
@@ -33,27 +25,19 @@ type BuilderErrors = {
 
 const EMPTY_ERRORS: BuilderErrors = { byField: {} };
 
-function parseOptions(optionsText: string): string[] {
-  return optionsText
-    .split("\n")
-    .map((option) => option.trim())
-    .filter((option) => option !== "");
-}
-
-function toDraftInput(drafts: FieldDraft[]): FormInput["fields"] {
-  return drafts.map((draft) => ({
-    id: draft.id,
-    label: draft.label,
-    type: draft.type,
-    required: draft.required,
-    options: hasOptions(draft.type) ? parseOptions(draft.optionsText) : [],
-  }));
+function withoutFieldErrors(errors: BuilderErrors, key: string): BuilderErrors {
+  if (!errors.byField[key]) return errors;
+  const byField = { ...errors.byField };
+  delete byField[key];
+  return { ...errors, byField };
 }
 
 type FormBuilderProps = {
   form?: Form;
 };
 
+// FormBuilder はフォームの構築画面。左のパーツをキャンバスへドラッグして項目を追加し、
+// 配置済みの項目もドラッグで並べ替え・横並びにできる。
 export function FormBuilder({ form }: FormBuilderProps) {
   const isEdit = Boolean(form);
   const router = useRouter();
@@ -67,57 +51,61 @@ export function FormBuilder({ form }: FormBuilderProps) {
 
   const [title, setTitle] = useState(form?.title ?? "");
   const [description, setDescription] = useState(form?.description ?? "");
-  const [drafts, setDrafts] = useState<FieldDraft[]>(() =>
-    form
-      ? form.fields.map((field) => ({
-          key: `field-${field.id}`,
-          id: field.id,
-          label: field.label,
-          type: field.type,
-          required: field.required,
-          optionsText: field.options.join("\n"),
-        }))
-      : [{ key: "draft-initial", label: "", type: "text", required: false, optionsText: "" }],
-  );
+  const [rows, setRows] = useState<FieldDraft[][]>(() => (form ? draftRowsFromForm(form) : []));
   const [errors, setErrors] = useState<BuilderErrors>(EMPTY_ERRORS);
-  const [previewValues, setPreviewValues] = useState<Record<string, string | string[]>>({});
+  const [dragging, setDragging] = useState<Dragging | null>(null);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [focusKey, setFocusKey] = useState<string | null>(null);
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const fieldCount = rows.flat().length;
+  const isFull = fieldCount >= MAX_FIELDS;
 
-  function updateDraft(key: string, patch: Partial<FieldDraft>) {
-    setDrafts((current) => current.map((draft) => (draft.key === key ? { ...draft, ...patch } : draft)));
-    // 編集した項目のエラー表示は、次に保存するまで消しておく。
-    setErrors((current) => {
-      if (!current.byField[key]) return current;
-      const byField = { ...current.byField };
-      delete byField[key];
-      return { ...current, byField };
+  const clearFocusKey = useCallback(() => setFocusKey(null), []);
+  const handleDragEnd = useCallback(() => setDragging(null), []);
+
+  function addField(type: FieldType, position: DropPosition) {
+    const key = newKey();
+    setRows((current) => insertItem(current, newDraft(key, type), position));
+    setErrors((current) => ({ ...current, fields: undefined }));
+    setFocusKey(key);
+  }
+
+  function handleDrop(position: DropPosition) {
+    if (!dragging) return;
+    // 移動した項目が別の行へ移ると要素が作り直され、元の要素に dragend が届かないことがあるため、
+    // ドロップした時点でドラッグ状態を終える。
+    setDragging(null);
+    if (dragging.kind === "part") {
+      addField(dragging.type, position);
+    } else {
+      setRows((current) => moveItem(current, dragging.key, position));
+      setFocusKey(dragging.key);
+    }
+  }
+
+  function handleRemove(key: string) {
+    setRows((current) => removeItem(current, key));
+    setErrors((current) => withoutFieldErrors(current, key));
+  }
+
+  function handleSaveField(draft: FieldDraft) {
+    setRows((current) => current.map((row) => row.map((item) => (item.key === draft.key ? draft : item))));
+    setErrors((current) => withoutFieldErrors(current, draft.key));
+    setEditingKey(null);
+    setFocusKey(draft.key);
+  }
+
+  function handleMoveField(key: string, direction: -1 | 1) {
+    setRows((current) => {
+      const position = stepPosition(current, key, direction);
+      return position ? moveItem(current, key, position) : current;
     });
-  }
-
-  function moveDraft(index: number, offset: -1 | 1) {
-    setDrafts((current) => {
-      const target = index + offset;
-      if (target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
-  function removeDraft(key: string) {
-    setDrafts((current) => current.filter((draft) => draft.key !== key));
-  }
-
-  function addDraft() {
-    setDrafts((current) => [
-      ...current,
-      { key: newKey(), label: "", type: "text", required: false, optionsText: "" },
-    ]);
   }
 
   function handleSubmit() {
-    const parsed = formSchema.safeParse({ title, description, fields: toDraftInput(drafts) });
+    const drafts = rows.flat();
+    const parsed = formSchema.safeParse({ title, description, fields: toFieldInputs(rows) });
 
     if (!parsed.success) {
       const nextErrors: BuilderErrors = { byField: {} };
@@ -156,9 +144,35 @@ export function FormBuilder({ form }: FormBuilderProps) {
     }
   }
 
+  const editing = (() => {
+    if (editingKey === null) return null;
+    for (const [rowIndex, row] of rows.entries()) {
+      const columnIndex = row.findIndex((draft) => draft.key === editingKey);
+      if (columnIndex >= 0) return { draft: row[columnIndex], rowIndex, columnIndex };
+    }
+    return null;
+  })();
+
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <section className="flex flex-col gap-4" aria-label="フォームの設定">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <section className="flex min-w-0 flex-col gap-2 lg:sticky lg:top-6 lg:self-start" aria-labelledby={`${idPrefix}-parts`}>
+        <h3 id={`${idPrefix}-parts`} className="text-sm font-semibold text-muted-foreground">
+          パーツ
+        </h3>
+        <PartsPalette
+          isDisabled={isFull}
+          onDragStart={setDragging}
+          onDragEnd={handleDragEnd}
+          onAdd={(type) => addField(type, { kind: "newRow", rowIndex: rows.length })}
+        />
+        <p className="text-xs text-muted-foreground">
+          {isFull
+            ? `項目は${MAX_FIELDS}個までです`
+            : "右のフォームへドラッグして配置します。キーボードでは Enter で掴み、Tab で移動先を選んで Enter で置けます。"}
+        </p>
+      </section>
+
+      <section className="flex min-w-0 flex-col gap-4" aria-label="フォーム">
         <Card className="justify-start">
           <Input
             id={`${idPrefix}-title`}
@@ -191,99 +205,22 @@ export function FormBuilder({ form }: FormBuilderProps) {
           </p>
         ) : null}
 
-        <ol className="flex flex-col gap-4">
-          {drafts.map((draft, index) => {
-            const fieldErrors = errors.byField[draft.key] ?? {};
-            const fieldId = `${idPrefix}-${draft.key}`;
-            return (
-              <li key={draft.key}>
-                <Card className="justify-start gap-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-muted-foreground">項目 {index + 1}</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="secondary"
-                        className="w-auto px-2 py-1.5"
-                        aria-label="上へ移動"
-                        disabled={index === 0}
-                        onClick={() => moveDraft(index, -1)}
-                      >
-                        <ArrowUpIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="w-auto px-2 py-1.5"
-                        aria-label="下へ移動"
-                        disabled={index === drafts.length - 1}
-                        onClick={() => moveDraft(index, 1)}
-                      >
-                        <ArrowDownIcon className="size-4" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="w-auto px-2 py-1.5 text-danger"
-                        aria-label="項目を削除"
-                        disabled={drafts.length === 1}
-                        onClick={() => removeDraft(draft.key)}
-                      >
-                        <TrashIcon className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
-                    <Input
-                      id={`${fieldId}-label`}
-                      label="項目名"
-                      value={draft.label}
-                      maxLength={100}
-                      error={fieldErrors.label}
-                      onChange={(event) => updateDraft(draft.key, { label: event.target.value })}
-                    />
-                    <Select
-                      id={`${fieldId}-type`}
-                      label="入力形式"
-                      value={draft.type}
-                      onChange={(event) => updateDraft(draft.key, { type: event.target.value as FieldType })}
-                    >
-                      {FIELD_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {FIELD_TYPE_LABEL[type]}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  {hasOptions(draft.type) ? (
-                    <Textarea
-                      id={`${fieldId}-options`}
-                      label="選択肢（1行に1つ）"
-                      rows={3}
-                      value={draft.optionsText}
-                      error={fieldErrors.options}
-                      onChange={(event) => updateDraft(draft.key, { optionsText: event.target.value })}
-                    />
-                  ) : null}
-
-                  <Checkbox
-                    label="必須項目にする"
-                    checked={draft.required}
-                    onChange={(event) => updateDraft(draft.key, { required: event.target.checked })}
-                  />
-                </Card>
-              </li>
-            );
-          })}
-        </ol>
+        <Card className="justify-start gap-0 p-3 sm:p-6">
+          <BuilderCanvas
+            rows={rows}
+            dragging={dragging}
+            errorsByKey={errors.byField}
+            focusKey={focusKey}
+            onFocused={clearFocusKey}
+            onDragStart={setDragging}
+            onDragEnd={handleDragEnd}
+            onDrop={handleDrop}
+            onEdit={setEditingKey}
+            onRemove={handleRemove}
+          />
+        </Card>
 
         {errors.fields ? <p className="text-sm text-danger">{errors.fields}</p> : null}
-
-        <Button variant="secondary" onClick={addDraft}>
-          <span className="flex items-center justify-center gap-1.5">
-            <PlusIcon className="size-4" />
-            項目を追加
-          </span>
-        </Button>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" className="sm:w-auto" onClick={() => router.back()}>
@@ -295,27 +232,22 @@ export function FormBuilder({ form }: FormBuilderProps) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3 lg:sticky lg:top-6 lg:self-start" aria-label="プレビュー">
-        <h3 className="text-sm font-semibold text-muted-foreground">プレビュー</h3>
-        <Card className="justify-start gap-5">
-          <div className="flex flex-col gap-1">
-            <p className="text-lg font-bold break-words">{title.trim() || "（フォーム名未設定）"}</p>
-            {description.trim() ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-          </div>
-          {drafts.map((draft) => {
-            const options = parseOptions(draft.optionsText);
-            return (
-              <FieldInput
-                key={draft.key}
-                id={`${idPrefix}-${draft.key}-preview`}
-                field={{ label: draft.label, type: draft.type, required: draft.required, options }}
-                value={previewValues[draft.key] ?? (draft.type === "checkbox" ? [] : "")}
-                onChange={(value) => setPreviewValues((current) => ({ ...current, [draft.key]: value }))}
-              />
-            );
-          })}
-        </Card>
-      </section>
+      {editing ? (
+        <FieldSettingsModal
+          key={editing.draft.key}
+          draft={editing.draft}
+          initialErrors={errors.byField[editing.draft.key]}
+          positionText={`${editing.rowIndex + 1}行目・${editing.columnIndex + 1}列目（この行の項目数: ${rows[editing.rowIndex].length}）`}
+          canMoveBackward={stepPosition(rows, editing.draft.key, -1) !== null}
+          canMoveForward={stepPosition(rows, editing.draft.key, 1) !== null}
+          onMove={(direction) => handleMoveField(editing.draft.key, direction)}
+          onSave={handleSaveField}
+          onClose={() => {
+            setEditingKey(null);
+            setFocusKey(editing.draft.key);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

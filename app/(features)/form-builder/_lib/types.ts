@@ -19,6 +19,8 @@ export type FormField = {
   type: FieldType;
   required: boolean;
   options: string[];
+  // 表示する行（0始まり）。同じ行の項目は横並びで表示する。
+  row: number;
 };
 
 export type Form = {
@@ -47,8 +49,10 @@ export type FormFieldInput = {
   type: FieldType;
   required: boolean;
   options: string[];
+  row: number;
 };
 
+// fields は表示順（行ごとに左から右）に並べ、row は先頭から昇順にする。
 export type FormInput = {
   title: string;
   description: string;

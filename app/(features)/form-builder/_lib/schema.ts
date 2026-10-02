@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { hasOptions } from "./fieldTypes";
+import { MAX_FIELDS_PER_ROW, toRows } from "./layout";
 import { FIELD_TYPES } from "./types";
 import type { FormField, RecordValue, RecordValues } from "./types";
 
 // 制約値は Go側（formbuilder/dto・service）のバリデーションと揃える。
-const MAX_FIELDS = 50;
+export const MAX_FIELDS = 50;
 const MAX_OPTIONS = 50;
 const MAX_OPTION_LENGTH = 100;
 const MAX_TEXT_LENGTH = 255;
@@ -14,7 +15,7 @@ const MAX_NUMBER_ABS = 1e15;
 
 const REQUIRED_MESSAGE = "この項目は必須です";
 
-const formFieldSchema = z
+export const formFieldSchema = z
   .object({
     id: z.number().int().positive().optional(),
     label: z
@@ -27,6 +28,7 @@ const formFieldSchema = z
     options: z.array(
       z.string().trim().min(1).max(MAX_OPTION_LENGTH, `選択肢は${MAX_OPTION_LENGTH}文字以内で入力してください`),
     ),
+    row: z.number().int().min(0),
   })
   .superRefine((field, ctx) => {
     if (!hasOptions(field.type)) return;
@@ -50,7 +52,11 @@ export const formSchema = z.object({
   fields: z
     .array(formFieldSchema)
     .min(1, "項目を1つ以上追加してください")
-    .max(MAX_FIELDS, `項目は${MAX_FIELDS}個以内にしてください`),
+    .max(MAX_FIELDS, `項目は${MAX_FIELDS}個以内にしてください`)
+    .refine(
+      (fields) => toRows(fields).every((row) => row.length <= MAX_FIELDS_PER_ROW),
+      `1行に並べられる項目は${MAX_FIELDS_PER_ROW}個までです`,
+    ),
 });
 
 // 回答画面の入力状態。checkbox は選択中の選択肢、それ以外は入力欄の文字列。

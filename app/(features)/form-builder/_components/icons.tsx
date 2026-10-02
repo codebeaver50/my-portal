@@ -35,3 +35,24 @@ export function ArrowDownIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function GripIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}
+
+export function PencilIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 20h4L18.5 9.5a2.12 2.12 0 0 0-4-4L4 16v4ZM13.5 6.5l4 4" />
+    </svg>
+  );
+}
