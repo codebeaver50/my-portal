@@ -18,6 +18,9 @@ const (
 	maxOptions      = 50
 	maxOptionLength = 100
 	maxFieldsPerRow = 3
+	// 項目の幅は1行を gridColumns 等分した単位で表し、minFieldWidth 以上・行の合計 gridColumns 以内とする。
+	gridColumns   = 12
+	minFieldWidth = 3
 )
 
 // FormService はフォーム（項目定義を含む）の作成・更新・削除・取得を実装する。
@@ -46,28 +49,60 @@ func NewFormService(
 	return &formService{db: db, formRepo: formRepo, fieldRepo: fieldRepo, recordRepo: recordRepo}
 }
 
-// normalizeFields は項目定義を検証し、前後の空白を除いたラベル・選択肢に正規化した
-// コピーを返す。選択肢を持たない入力形式の options は空にする。
+// normalizeLayout は項目の行と幅を検証し、各項目の行番号・幅を返す。
 // 行番号は 0 から詰めた連番に振り直す（例: 0, 2, 2, 5 → 0, 1, 1, 2）。
+// 幅が未指定（0）の項目には、その行を均等に割った幅を割り当てる。
+func normalizeLayout(fields []dto.FormFieldRequest) (rows []int, widths []int, err error) {
+	rows = make([]int, len(fields))
+	widths = make([]int, len(fields))
+
+	start := 0
+	for row := 0; start < len(fields); row++ {
+		end := start + 1
+		for end < len(fields) && fields[end].Row == fields[start].Row {
+			end++
+		}
+		if end < len(fields) && fields[end].Row < fields[start].Row {
+			return nil, nil, &ValidationError{Message: "項目は行の順に並べてください"}
+		}
+		count := end - start
+		if count > maxFieldsPerRow {
+			return nil, nil, &ValidationError{Message: fmt.Sprintf("1行に並べられる項目は%d個までです", maxFieldsPerRow)}
+		}
+
+		total := 0
+		for i := start; i < end; i++ {
+			width := fields[i].Width
+			if width == 0 {
+				width = gridColumns / count
+			}
+			if width < minFieldWidth || width > gridColumns {
+				return nil, nil, &ValidationError{Message: fmt.Sprintf("項目の幅は%d〜%dで指定してください", minFieldWidth, gridColumns)}
+			}
+			rows[i] = row
+			widths[i] = width
+			total += width
+		}
+		if total > gridColumns {
+			return nil, nil, &ValidationError{Message: fmt.Sprintf("1行の項目の幅の合計は%d以内にしてください", gridColumns)}
+		}
+		start = end
+	}
+	return rows, widths, nil
+}
+
+// normalizeFields は項目定義を検証し、前後の空白を除いたラベル・選択肢に正規化した
+// コピーを返す。選択肢を持たない入力形式の options は空にする。行・幅は normalizeLayout で正規化する。
 func normalizeFields(fields []dto.FormFieldRequest) ([]dto.FormFieldRequest, error) {
 	normalized := make([]dto.FormFieldRequest, len(fields))
 	seenIDs := make(map[uint]bool)
-	row, fieldsInRow := -1, 0
+	rows, widths, err := normalizeLayout(fields)
+	if err != nil {
+		return nil, err
+	}
 
 	for i, field := range fields {
 		position := i + 1
-
-		if i > 0 && field.Row < fields[i-1].Row {
-			return nil, &ValidationError{Message: "項目は行の順に並べてください"}
-		}
-		if i == 0 || field.Row != fields[i-1].Row {
-			row++
-			fieldsInRow = 0
-		}
-		fieldsInRow++
-		if fieldsInRow > maxFieldsPerRow {
-			return nil, &ValidationError{Message: fmt.Sprintf("1行に並べられる項目は%d個までです", maxFieldsPerRow)}
-		}
 
 		if field.ID != nil {
 			if seenIDs[*field.ID] {
@@ -112,7 +147,8 @@ func normalizeFields(fields []dto.FormFieldRequest) ([]dto.FormFieldRequest, err
 			Type:     field.Type,
 			Required: field.Required,
 			Options:  options,
-			Row:      row,
+			Row:      rows[i],
+			Width:    widths[i],
 		}
 	}
 
@@ -134,13 +170,14 @@ func toFormField(formID uint, sortOrder int, field dto.FormFieldRequest) (models
 		return models.FormField{}, err
 	}
 	return models.FormField{
-		FormID:    formID,
-		Label:     field.Label,
-		Type:      field.Type,
-		Required:  field.Required,
-		Options:   string(options),
-		LayoutRow: field.Row,
-		SortOrder: sortOrder,
+		FormID:      formID,
+		Label:       field.Label,
+		Type:        field.Type,
+		Required:    field.Required,
+		Options:     string(options),
+		LayoutRow:   field.Row,
+		LayoutWidth: field.Width,
+		SortOrder:   sortOrder,
 	}, nil
 }
 
@@ -249,6 +286,7 @@ func (s *formService) Update(ctx context.Context, id uint, req *dto.FormRequest)
 			current.Required = next.Required
 			current.Options = next.Options
 			current.LayoutRow = next.LayoutRow
+			current.LayoutWidth = next.LayoutWidth
 			current.SortOrder = next.SortOrder
 			if err := fieldRepo.Update(ctx, &current); err != nil {
 				return err
@@ -335,6 +373,7 @@ func toFormResponse(form models.Form) (*dto.FormResponse, error) {
 			Required: field.Required,
 			Options:  options,
 			Row:      field.LayoutRow,
+			Width:    field.LayoutWidth,
 		}
 	}
 

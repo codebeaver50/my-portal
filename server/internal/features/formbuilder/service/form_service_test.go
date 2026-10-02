@@ -90,6 +90,48 @@ func TestFormService_Create(t *testing.T) {
 		}
 	})
 
+	t.Run("fills unspecified widths equally and keeps specified widths", func(t *testing.T) {
+		svc, _ := newServices(t)
+
+		result, err := svc.Create(context.Background(), &dto.FormRequest{
+			Title: "フォーム",
+			Fields: []dto.FormFieldRequest{
+				{Label: "A", Type: models.TextField},
+				{Label: "B", Type: models.TextField},
+				{Label: "C", Type: models.TextField},
+				{Label: "D", Type: models.TextField, Row: 1, Width: 8},
+				{Label: "E", Type: models.TextField, Row: 1, Width: 3},
+				{Label: "F", Type: models.TextField, Row: 2},
+			},
+		})
+		if err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		want := []int{4, 4, 4, 8, 3, 12}
+		for i, field := range result.Fields {
+			if field.Width != want[i] {
+				t.Errorf("Fields[%d].Width = %d, want %d", i, field.Width, want[i])
+			}
+		}
+	})
+
+	t.Run("rejects invalid widths", func(t *testing.T) {
+		tests := map[string][]dto.FormFieldRequest{
+			"too narrow": {{Label: "A", Type: models.TextField, Width: minFieldWidth - 1}},
+			"row too wide": {
+				{Label: "A", Type: models.TextField, Width: 8},
+				{Label: "B", Type: models.TextField, Width: 6},
+			},
+		}
+		for name, fields := range tests {
+			t.Run(name, func(t *testing.T) {
+				svc, _ := newServices(t)
+				_, err := svc.Create(context.Background(), &dto.FormRequest{Title: "フォーム", Fields: fields})
+				assertValidationError(t, err)
+			})
+		}
+	})
+
 	t.Run("rejects more than three fields in a row", func(t *testing.T) {
 		svc, _ := newServices(t)
 
@@ -170,8 +212,8 @@ func TestFormService_Update(t *testing.T) {
 			Title: "参加申込（改）",
 			Fields: []dto.FormFieldRequest{
 				{ID: uintPtr(methodID), Label: "参加方法", Type: models.SelectField, Required: true, Options: []string{"会場", "オンライン", "未定"}},
-				{ID: uintPtr(nameID), Label: "お名前", Type: models.TextField, Required: true, Row: 1},
-				{Label: "メールアドレス", Type: models.EmailField, Row: 1},
+				{ID: uintPtr(nameID), Label: "お名前", Type: models.TextField, Required: true, Row: 1, Width: 9},
+				{Label: "メールアドレス", Type: models.EmailField, Row: 1, Width: 3},
 			},
 		})
 		if err != nil {
@@ -186,6 +228,9 @@ func TestFormService_Update(t *testing.T) {
 		}
 		if updated.Fields[0].Row != 0 || updated.Fields[1].Row != 1 || updated.Fields[2].Row != 1 {
 			t.Errorf("rows = %d, %d, %d, want 0, 1, 1", updated.Fields[0].Row, updated.Fields[1].Row, updated.Fields[2].Row)
+		}
+		if updated.Fields[1].Width != 9 || updated.Fields[2].Width != 3 {
+			t.Errorf("widths = %d, %d, want 9, 3", updated.Fields[1].Width, updated.Fields[2].Width)
 		}
 		if updated.Fields[1].ID != nameID || updated.Fields[1].Label != "お名前" {
 			t.Errorf("second field = %+v, want renamed name field", updated.Fields[1])

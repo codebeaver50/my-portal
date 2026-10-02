@@ -12,6 +12,7 @@ import (
 // ID が指定された場合は既存項目の更新、未指定の場合は新規項目として扱う。
 // 既存項目のIDを保つことで、回答データ（項目IDをキーに保存）との対応を維持する。
 // Row が同じ項目は同じ行に横並びで表示する（1行あたり最大3項目）。
+// Width は1行を12等分した単位の幅（3〜12、行の合計12以内）。0（未指定）なら行を均等に割った幅にする。
 type FormFieldRequest struct {
 	ID       *uint            `json:"id"`
 	Label    string           `json:"label" binding:"required,max=100"`
@@ -19,6 +20,7 @@ type FormFieldRequest struct {
 	Required bool             `json:"required"`
 	Options  []string         `json:"options"`
 	Row      int              `json:"row" binding:"min=0"`
+	Width    int              `json:"width" binding:"min=0,max=12"`
 }
 
 // FormRequest はフォームの作成/更新リクエスト。Fields の並び順がそのまま表示順
@@ -37,6 +39,7 @@ type FormFieldResponse struct {
 	Required bool             `json:"required"`
 	Options  []string         `json:"options"`
 	Row      int              `json:"row"`
+	Width    int              `json:"width"`
 }
 
 // FormResponse はフォーム1件分（項目定義つき）。

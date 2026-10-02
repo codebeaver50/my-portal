@@ -32,6 +32,8 @@ type FormField struct {
 	Options string `gorm:"column:options;type:json;not null" json:"options"`
 	// LayoutRow: 表示する行（0始まり）。同じ行の項目は横並びで表示する
 	LayoutRow int `gorm:"column:layout_row;not null;default:0" json:"layoutRow"`
+	// LayoutWidth: 1行を12等分した単位での幅（3〜12）。同じ行の合計は12以内
+	LayoutWidth int `gorm:"column:layout_width;not null;default:12" json:"layoutWidth"`
 	// SortOrder: フォーム全体での表示順（行ごとに左から右）
 	SortOrder int       `gorm:"column:sort_order;not null;default:0" json:"sortOrder"`
 	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
