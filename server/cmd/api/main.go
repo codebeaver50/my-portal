@@ -12,6 +12,7 @@ import (
 	"github.com/codebeaver50/my-portal/server/internal/contact"
 	"github.com/codebeaver50/my-portal/server/internal/db"
 	bookdatabaserouter "github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/router"
+	formbuilderrouter "github.com/codebeaver50/my-portal/server/internal/features/formbuilder/router"
 	simplecmsrouter "github.com/codebeaver50/my-portal/server/internal/features/simplecms/router"
 	simpleledgerrouter "github.com/codebeaver50/my-portal/server/internal/features/simpleledger/router"
 )
@@ -69,6 +70,7 @@ func main() {
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn)
 	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn)
+	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn)
 
 	port := os.Getenv("PORT")
 	if port == "" {
