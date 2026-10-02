@@ -84,6 +84,7 @@ server/
 - MySQLは `docker-compose.yml` でコンテナ起動する（`docker compose up -d`）。ホストへのMySQLインストールは不要
 - Next.js・Goはどちらもコンテナ化せず、ホスト上でネイティブ実行する（`npm run dev` / `go run ./cmd/api`）。コード変更のたびにイメージを再ビルドする必要がなく開発サイクルが速いため
 - 接続情報（ユーザー: `app` / パスワード: `app` / DB名: `my_portal` / ポート: `3306`）は開発用の固定値。本番の値とは別物
+- Go APIは`go run`のホットリロードがないため、Go側のコード（ルート追加等）を変更したら必ずAPIを再起動する。古いプロセスが`8080`番ポートを掴んだまま新しい`go run ./cmd/api`を実行すると`bind: address already in use`で起動に失敗し、**古いAPIが応答し続ける**（新しく追加したエンドポイントだけが`404`になるのが症状）。`lsof -i :8080`でプロセスの起動時刻を確認し、古いプロセスを`kill`してから起動し直す
 
 ## 本番デプロイ（AWS Lightsail）
 
@@ -150,3 +151,30 @@ server/
   DATABASE_URL="mysql://app:app@tcp(127.0.0.1:3306)/my_portal" READ_ONLY=true go run ./cmd/api
   ```
 
+## カスタムフォームビルダー（form-builder）
+
+- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。他の公開デモと同様、誰でも作成・編集・削除できる（`READ_ONLY=true`の本番では書き込みがすべて止まる。管理者限定にはしていない）
+- テーブル（`server/migrations/000004_create_form_builder_tables.*.sql`、シードデータとしてフォーム3件・回答17件を含む）
+  - `form_builder_forms`: フォーム本体
+  - `form_builder_form_fields`: 項目定義。`type`は`text` / `textarea` / `number` / `email` / `date` / `select` / `radio` / `checkbox`。`options`（JSON配列）は`select`/`radio`/`checkbox`の選択肢で、それ以外は`[]`
+  - `form_builder_form_records`: 回答。`data`（JSON）に`{ "<項目ID>": 値 }`の形で保存する。項目ごとに列を持たないため、フォーム定義を変更してもスキーマ変更は不要
+- API（`/api/form-builder`）
+  ```
+  GET    /forms                       フォーム一覧（項目数・回答数つき）
+  POST   /forms                       フォームと項目を作成
+  GET    /forms/:id                   フォーム詳細（項目つき）
+  PUT    /forms/:id                   フォームと項目を更新
+  DELETE /forms/:id                   フォームを削除（項目・回答はFKのON DELETE CASCADEで削除）
+  GET    /forms/:id/records           回答一覧（page / pageSize、新しい順）
+  POST   /forms/:id/records           回答を投稿
+  DELETE /forms/:id/records/:recordId 回答を削除
+  ```
+- 設計判断
+  - **項目IDの維持**: 回答は項目IDをキーに保存するため、フォーム更新時は項目を丸ごと入れ替えず、リクエストの`fields[].id`で既存項目を識別する（IDあり＝更新、IDなし＝新規作成、リクエストに含まれない既存項目＝削除）。項目名の変更・並べ替えをしても既存の回答との対応が崩れない
+  - 削除した項目の回答値は`data`内に残るが、項目定義がないため回答データ一覧には表示しない。入力形式・選択肢を変更しても既存の回答は書き換えない（編集画面に注意書きを表示）
+  - **回答の検証はGo側（`service/record_service.go`）を正とする**。必須チェック・型・メール形式・`YYYY-MM-DD`・選択肢に含まれるか・未知の項目IDの混入を検証し、エラー時は`400`＋`{"error": "...", "fieldErrors": {"<項目ID>": "..."}}`を返す。フロント側（`_lib/schema.ts`）も項目定義からzodスキーマを動的に組み立てて同じ制約で事前チェックするが、制約値（文字数上限等）を変更する場合は両方を揃えること
+  - checkboxの値は回答の選択順に依らず、選択肢の定義順で保存する
+- フロントエンド（`app/(features)/form-builder/`）
+  - `/form-builder`（一覧）、`/form-builder/new`・`/[formId]/edit`（フォーム構築画面。右側にプレビュー）、`/[formId]`（回答画面）、`/[formId]/records`（回答データ一覧）
+  - `[formId]`配下のページはServer Componentで`_lib/getForm.ts`（Reactの`cache`で`generateMetadata`とページ本体の取得をまとめる）からフォームを取得し、不正なID・存在しないフォームは`notFound()`にする。一覧・回答・削除等の操作はTanStack Query（`_lib/useForms.ts`）
+  - 共通UIとして`components/ui/`に`Checkbox` / `Radio`と、`Button`の`danger`バリアント（削除確認用）を追加した
