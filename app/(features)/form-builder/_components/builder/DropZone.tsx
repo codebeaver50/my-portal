@@ -6,6 +6,8 @@ import { cn } from "@/components/ui";
 import { getDropOperation } from "./dnd";
 import type { DropPosition } from "../../_lib/layout";
 
+export type DropZoneVariant = "row" | "column-start" | "column-end" | "fill" | "end";
+
 type DropZoneProps = {
   position: DropPosition;
   // スクリーンリーダーで読み上げる、落とし先の説明。
@@ -13,8 +15,8 @@ type DropZoneProps = {
   // ドラッグ中、かつこの位置に置ける場合のみ true。
   isEnabled: boolean;
   // row: 行と行のあいだ（横線）、column-start / column-end: 項目の左／右（縦線）、
-  // end: フォーム末尾の常設の枠。
-  variant: "row" | "column-start" | "column-end" | "end";
+  // fill: 行の右側の余白全体（行の末尾に追加）、end: フォーム末尾の常設の枠。
+  variant: DropZoneVariant;
   onDrop: (position: DropPosition) => void;
 };
 
@@ -49,6 +51,29 @@ export function DropZone({ position, label, isEnabled, variant, onDrop }: DropZo
         )}
       >
         パーツをここにドラッグして項目を追加
+      </div>
+    );
+  }
+
+  if (variant === "fill") {
+    // 余白の左端（直前の項目との間の余白の中央）に挿入位置の縦線を出し、余白全体を薄く強調する。
+    return (
+      <div
+        {...zoneProps}
+        className={cn("absolute inset-y-0 -left-7 right-0 z-10 outline-none", !isEnabled && "pointer-events-none")}
+      >
+        <div
+          className={cn(
+            "absolute inset-y-0 left-7 right-0 rounded-lg border-2 border-dashed transition-colors",
+            isDropTarget ? "border-accent bg-accent-bg" : isEnabled ? "border-accent/25" : "border-transparent",
+          )}
+        />
+        <div
+          className={cn(
+            "absolute inset-y-0 left-[18px] w-1 rounded-full transition-colors",
+            isDropTarget ? "bg-accent" : "bg-transparent",
+          )}
+        />
       </div>
     );
   }

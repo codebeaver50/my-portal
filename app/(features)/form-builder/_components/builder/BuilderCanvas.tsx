@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/components/ui";
-import { canDrop, maxWidth } from "../../_lib/layout";
+import { GRID_COLUMNS, canDrop, maxWidth } from "../../_lib/layout";
 import { COL_SPAN_CLASS } from "../layoutClasses";
 import { CanvasField } from "./CanvasField";
 import { DropZone } from "./DropZone";
@@ -10,6 +10,7 @@ import type { FieldDraft } from "../../_lib/draft";
 import type { DropPosition } from "../../_lib/layout";
 import type { FieldErrors } from "./CanvasField";
 import type { Dragging } from "./dnd";
+import type { DropZoneVariant } from "./DropZone";
 
 function fieldName(draft: FieldDraft): string {
   return `「${draft.label.trim() || "項目名未設定"}」`;
@@ -61,7 +62,7 @@ export function BuilderCanvas({
   onResize,
 }: BuilderCanvasProps) {
   const draggedKey = dragging?.kind === "field" ? dragging.key : undefined;
-  const zone = (position: DropPosition, variant: "row" | "column-start" | "column-end" | "end") => (
+  const zone = (position: DropPosition, variant: DropZoneVariant) => (
     <DropZone
       position={position}
       variant={variant}
@@ -73,37 +74,43 @@ export function BuilderCanvas({
 
   return (
     <div className="flex flex-col">
-      {rows.map((row, rowIndex) => (
-        <div key={row[0].key} className="flex flex-col">
-          <div className="relative h-4">{zone({ kind: "newRow", rowIndex }, "row")}</div>
-          <div data-layout-row className="grid grid-cols-12 gap-x-4">
-            {row.map((draft, columnIndex) => (
-              <div key={draft.key} className={cn("relative min-w-0", COL_SPAN_CLASS[draft.width])}>
-                {zone({ kind: "inRow", rowIndex, columnIndex }, "column-start")}
-                <CanvasField
-                  draft={draft}
-                  errors={errorsByKey[draft.key]}
-                  shouldFocus={focusKey === draft.key}
-                  onFocused={onFocused}
-                  onDragStart={onDragStart}
-                  onDragEnd={onDragEnd}
-                  onEdit={onEdit}
-                  onRemove={onRemove}
-                />
-                <WidthHandle
-                  fieldName={fieldName(draft)}
-                  width={draft.width}
-                  maxWidth={maxWidth(rows, draft.key)}
-                  onResize={(width) => onResize(draft.key, width)}
-                />
-                {columnIndex === row.length - 1
-                  ? zone({ kind: "inRow", rowIndex, columnIndex: columnIndex + 1 }, "column-end")
-                  : null}
-              </div>
-            ))}
+      {rows.map((row, rowIndex) => {
+        // 行の右側の余白（列数）。余白があれば余白全体を「行の末尾に追加」の落とし先にする。
+        const remaining = GRID_COLUMNS - row.reduce((sum, draft) => sum + draft.width, 0);
+        const endPosition: DropPosition = { kind: "inRow", rowIndex, columnIndex: row.length };
+        return (
+          <div key={row[0].key} className="flex flex-col">
+            <div className="relative h-4">{zone({ kind: "newRow", rowIndex }, "row")}</div>
+            <div data-layout-row className="grid grid-cols-12 gap-x-4">
+              {row.map((draft, columnIndex) => (
+                <div key={draft.key} className={cn("relative min-w-0", COL_SPAN_CLASS[draft.width])}>
+                  {zone({ kind: "inRow", rowIndex, columnIndex }, "column-start")}
+                  <CanvasField
+                    draft={draft}
+                    errors={errorsByKey[draft.key]}
+                    shouldFocus={focusKey === draft.key}
+                    onFocused={onFocused}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
+                    onEdit={onEdit}
+                    onRemove={onRemove}
+                  />
+                  <WidthHandle
+                    fieldName={fieldName(draft)}
+                    width={draft.width}
+                    maxWidth={maxWidth(rows, draft.key)}
+                    onResize={(width) => onResize(draft.key, width)}
+                  />
+                  {columnIndex === row.length - 1 && remaining === 0 ? zone(endPosition, "column-end") : null}
+                </div>
+              ))}
+              {remaining > 0 ? (
+                <div className={cn("relative min-h-12", COL_SPAN_CLASS[remaining])}>{zone(endPosition, "fill")}</div>
+              ) : null}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div className={rows.length > 0 ? "pt-4" : undefined}>{zone({ kind: "newRow", rowIndex: rows.length }, "end")}</div>
     </div>
   );

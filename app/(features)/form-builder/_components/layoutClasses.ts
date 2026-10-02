@@ -1,7 +1,10 @@
 // 項目の幅（1行を12等分した単位）ごとのTailwindのクラス。クラス名を検出できるよう静的に列挙する。
-// 幅は3〜12（_lib/layout.ts の MIN_FIELD_WIDTH〜GRID_COLUMNS）。
+// 項目の幅は3〜12（_lib/layout.ts の MIN_FIELD_WIDTH〜GRID_COLUMNS）。構築画面では行の右側の余白
+// （1〜9）にも使う。
 
 export const COL_SPAN_CLASS: Record<number, string> = {
+  1: "col-span-1",
+  2: "col-span-2",
   3: "col-span-3",
   4: "col-span-4",
   5: "col-span-5",
