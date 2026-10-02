@@ -118,11 +118,8 @@ server/
   - `ADMIN_PASSWORD` 環境変数と照合し、一致すれば署名付きセッションCookie（`portal_admin_session`、HMAC署名・有効期限つき、DBには保存しないステートレスな方式）を発行する
   - `POST /api/admin/login` / `POST /api/admin/logout` / `GET /api/admin/session` の3エンドポイントを `admin.RegisterRoutes` で登録する（`cmd/api/main.go` から呼ぶ）
   - `admin.AuthMiddleware()` を各featureの管理者限定エンドポイントに付与する（例: `simple-cms` の記事・カテゴリの作成/更新/削除）
-- フロントエンド側: `app/login/`にポートフォリオ共通のログインページを置く（`app/demo-portal/(features)/`配下ではない。特定のfeatureに属さないため）
-  - `app/_lib/adminAuth.ts` の `checkIsAdmin()`（Server Component専用、Cookieを中継して`GET /api/admin/session`を叩く）を各featureのページ・レイアウトから呼び、管理者向けUIを出すかどうかを判断する
-  - `app/_lib/adminApi.ts` の `adminLogin` / `adminLogout`（Client Component用）
-  - ログインページは `?redirect=/demo-portal/<feature-slug>` を受け取り、ログイン成功後に元のfeatureへ戻す
-  - ポータル共通フッター（`app/_components/SiteFooter.tsx`）に `/login` への導線を常設する
+- フロントエンド側: `app/_lib/adminAuth.ts` の `checkIsAdmin()`（Server Component専用、Cookieを中継して`GET /api/admin/session`を叩く）を各featureのページ・レイアウトから呼び、管理者向けUIを出すかどうかを判断する
+  - 専用のログインページ（旧 `/login`）は削除した。後述のアクセス管理（RBAC）へ置き換えるまでのあいだ、`ADMIN_PASSWORD` でログインする画面はなく、`simple-cms` の管理画面は未ログインだと `/demo-portal/login` へ送られる
 - 新しいfeatureで管理者限定の操作を追加する場合は、featureごとに認証を作らず、この共通の `admin.AuthMiddleware()` / `checkIsAdmin()` を再利用すること
 
 ## アクセス管理（RBAC、構築中）
@@ -144,7 +141,7 @@ server/
 - フロントエンド
   - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
   - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
-  - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す。フッターの `/login`（`ADMIN_PASSWORD`方式）は置き換えまで残している
+  - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す
 - 設計判断
   - **セッションはDBに保存する**（`ADMIN_PASSWORD`方式のHMAC署名Cookieのようなステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
   - CookieはHttpOnly・SameSite=Lax（本番のReleaseModeではSecureも付ける）。SameSite=LaxによりほかのサイトからのPOSTにCookieが付かないため、CSRFトークンは持たない
