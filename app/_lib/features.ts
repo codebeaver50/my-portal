@@ -33,6 +33,14 @@ export const features: Feature[] = [
     techStack: ["Next.js", "Go", "MySQL", "Tiptap"],
   },
   {
+    slug: "form-builder",
+    name: "カスタムフォームビルダー",
+    description: "項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるアプリです。",
+    category: "FORM & DATABASE",
+    status: "available",
+    techStack: ["Next.js", "Go", "MySQL"],
+  },
+  {
     slug: "shop-css",
     name: "Antiqueshop Oude dagen",
     description: "アンティークショップを想定した、HTML/CSSで制作した静的サイトのポートフォリオです。",

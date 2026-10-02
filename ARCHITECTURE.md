@@ -84,6 +84,7 @@ server/
 - MySQLは `docker-compose.yml` でコンテナ起動する（`docker compose up -d`）。ホストへのMySQLインストールは不要
 - Next.js・Goはどちらもコンテナ化せず、ホスト上でネイティブ実行する（`npm run dev` / `go run ./cmd/api`）。コード変更のたびにイメージを再ビルドする必要がなく開発サイクルが速いため
 - 接続情報（ユーザー: `app` / パスワード: `app` / DB名: `my_portal` / ポート: `3306`）は開発用の固定値。本番の値とは別物
+- Go APIは`go run`のホットリロードがないため、Go側のコード（ルート追加等）を変更したら必ずAPIを再起動する。古いプロセスが`8080`番ポートを掴んだまま新しい`go run ./cmd/api`を実行すると`bind: address already in use`で起動に失敗し、**古いAPIが応答し続ける**（新しく追加したエンドポイントだけが`404`になるのが症状）。`lsof -i :8080`でプロセスの起動時刻を確認し、古いプロセスを`kill`してから起動し直す
 
 ## 本番デプロイ（AWS Lightsail）
 
@@ -150,3 +151,38 @@ server/
   DATABASE_URL="mysql://app:app@tcp(127.0.0.1:3306)/my_portal" READ_ONLY=true go run ./cmd/api
   ```
 
+## カスタムフォームビルダー（form-builder）
+
+- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。他の公開デモと同様、誰でも作成・編集・削除できる（`READ_ONLY=true`の本番では書き込みがすべて止まる。管理者限定にはしていない）
+- テーブル（`server/migrations/000004_create_form_builder_tables.*.sql`、シードデータとしてフォーム3件・回答17件を含む）
+  - `form_builder_forms`: フォーム本体
+  - `form_builder_form_fields`: 項目定義。`type`は`text` / `textarea` / `number` / `email` / `date` / `select` / `radio` / `checkbox`。`options`（JSON配列）は`select`/`radio`/`checkbox`の選択肢で、それ以外は`[]`
+    - レイアウト: `layout_row`（0始まり）が同じ項目を同じ行に横並びで表示し、行の中の並びとフォーム全体の表示順は`sort_order`で決める（行ごとに左から右）。1行あたり最大3項目
+    - 幅: `layout_width`は1行を12等分した単位での幅（3〜12）。同じ行の合計は12以内で、右側に余白が残ってもよい（kintoneと同様に項目ごとに幅を持つ。行を常に埋める比率方式にはしない）
+  - `form_builder_form_records`: 回答。`data`（JSON）に`{ "<項目ID>": 値 }`の形で保存する。項目ごとに列を持たないため、フォーム定義を変更してもスキーマ変更は不要
+- API（`/api/form-builder`）
+  ```
+  GET    /forms                       フォーム一覧（項目数・回答数つき）
+  POST   /forms                       フォームと項目を作成
+  GET    /forms/:id                   フォーム詳細（項目つき）
+  PUT    /forms/:id                   フォームと項目を更新
+  DELETE /forms/:id                   フォームを削除（項目・回答はFKのON DELETE CASCADEで削除）
+  GET    /forms/:id/records           回答一覧（page / pageSize、新しい順）
+  POST   /forms/:id/records           回答を投稿
+  DELETE /forms/:id/records/:recordId 回答を削除
+  ```
+- 設計判断
+  - **項目IDの維持**: 回答は項目IDをキーに保存するため、フォーム更新時は項目を丸ごと入れ替えず、リクエストの`fields[].id`で既存項目を識別する（IDあり＝更新、IDなし＝新規作成、リクエストに含まれない既存項目＝削除）。項目名の変更・並べ替えをしても既存の回答との対応が崩れない
+  - 削除した項目の回答値は`data`内に残るが、項目定義がないため回答データ一覧には表示しない。入力形式・選択肢を変更しても既存の回答は書き換えない（編集画面に注意書きを表示）
+  - **回答の検証はGo側（`service/record_service.go`）を正とする**。必須チェック・型・メール形式・`YYYY-MM-DD`・選択肢に含まれるか・未知の項目IDの混入を検証し、エラー時は`400`＋`{"error": "...", "fieldErrors": {"<項目ID>": "..."}}`を返す。フロント側（`_lib/schema.ts`）も項目定義からzodスキーマを動的に組み立てて同じ制約で事前チェックするが、制約値（文字数上限等）を変更する場合は両方を揃えること
+  - checkboxの値は回答の選択順に依らず、選択肢の定義順で保存する
+  - **レイアウトのAPI表現**: 項目は表示順の平らな配列`fields[]`のまま、各項目に`row`を持たせる（行ごとの入れ子配列にはしない）。各項目は`width`も持つ。Go側（`normalizeLayout`）は`row`が配列の先頭から昇順か・1行3項目以内か・幅が3〜12で行の合計が12以内かを検証し、行番号を0からの連番に詰めて保存する。`width`が未指定（0）の項目には行を均等に割った幅を割り当てる。フロント側は`_lib/layout.ts`で行ごとの配列（`FieldDraft[][]`）との変換・挿入・移動を純粋関数として扱う
+- フロントエンド（`app/(features)/form-builder/`）
+  - `/form-builder`（一覧）、`/form-builder/new`・`/[formId]/edit`（フォーム構築画面）、`/[formId]`（回答画面。行ごとに横並び、スマホ幅では縦に積む）、`/[formId]/records`（回答データ一覧）
+  - フォーム構築画面（`_components/builder/`）はkintoneのようなドラッグ＆ドロップ式。左のパーツ（入力形式）を右のキャンバス（回答画面と同じ見た目）へドラッグして項目を追加し、配置済みの項目もドラッグで並べ替える。行と行のあいだに落とすと新しい行、行の中の項目の左右に落とすと横並びになる。項目のクリックで設定ダイアログ（項目名・入力形式・選択肢・必須、ドラッグの代替となる「前へ」「後ろへ」）を開く
+    - ドラッグ＆ドロップには**React Aria**（Adobe、`react-aria`パッケージ）の`useDrag` / `useDrop`フックのみを使う（見た目は`components/ui`のまま）。採用理由: ①キーボード（Enterで掴む→Tabで落とし先を選ぶ→Enterで置く）・スクリーンリーダーでのドラッグ操作が組み込みで用意されている、②継続的にメンテナンスされている（`@dnd-kit/core`は2024年12月以降更新が止まり後継は0.x、Atlassianのpragmatic-drag-and-dropはキーボード操作のドラッグを自前で用意する必要がある）
+    - 落とし先（`DropZone`）は全ての挿入位置に常に描画しておき、ドラッグ中かつ置ける位置だけを有効にする（無効な間は`aria-hidden`・クリック不可）。各落とし先には「2行目の「氏名」の右に挿入」のような読み上げ用ラベルを付ける。満員（3項目）の行や、置いても配置が変わらない位置は無効にする
+    - 幅の変更: 各項目の右端のつまみ（`WidthHandle`、`role="separator"`）を左右にドラッグすると1/12単位で変わり、キーボードではフォーカスして ←/→ で変えられる（React Aria の`useMove`）。最小幅〜行に収まる最大幅の範囲に制限する。行の右側に余白がある場合は、余白全体を「その行の末尾に追加」の落とし先にする（項目の右端の細い帯だけだと、余白の中ほどに落としても何も起きず横並びにできないように見えるため）。項目を既存の行へ移動・追加して幅が足りない場合は、その項目を残りの幅に縮め、それも最小幅未満なら行を均等割りにする（`_lib/layout.ts`の`fitRow`）。回答画面はsm以上で12列グリッドに幅どおり並べ、スマホ幅では縦に積む
+    - 注意: React Aria はドラッグ開始時の処理を`requestAnimationFrame`で行うため、タブが非表示（`document.visibilityState === "hidden"`）だとキーボードでのドラッグが始まらない。ブラウザ自動操作でテストする際はタブを前面に出すこと
+  - `[formId]`配下のページはServer Componentで`_lib/getForm.ts`（Reactの`cache`で`generateMetadata`とページ本体の取得をまとめる）からフォームを取得し、不正なID・存在しないフォームは`notFound()`にする。一覧・回答・削除等の操作はTanStack Query（`_lib/useForms.ts`）
+  - 共通UIとして`components/ui/`に`Checkbox` / `Radio`と、`Button`の`danger`バリアント（削除確認用）を追加した。`Modal`には`role="dialog"`・`aria-modal`・タイトルとの関連付けと、Escキーで閉じる処理を追加した

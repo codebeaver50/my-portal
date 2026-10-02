@@ -1,5 +1,6 @@
 export { Badge } from "./Badge";
 export { Button, LinkButton } from "./Button";
+export { Checkbox, Radio } from "./Checkbox";
 export { Card, CardHeader, CardTitle, CardDescription } from "./Card";
 export { Grid } from "./Grid";
 export { Input } from "./Input";
