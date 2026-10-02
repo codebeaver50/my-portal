@@ -149,6 +149,7 @@ server/
   - READ_ONLYの除外リストには入れていない。`demo-admin` のパスワードはリポジトリのシードデータから分かるため、`READ_ONLY=true` の本番では権限を変更できない
 - フロントエンド
   - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
+  - `/demo-portal/access-control`: アクセス管理画面。リソース（行）×ロール（列）の権限表で、`access-control` の `write` 権限があれば各セルの権限（なし・閲覧・編集）を変えて「変更を保存」で保存できる（変更したロールだけを`PUT`する）。`read` のみなら表を閲覧するだけ。選べる権限はGo側の検証と揃え（`_lib/permissions.ts` の `selectableLevels`）、`admin` ロールの列と、ゲストロールの「アクセス管理」は変更できない表示にする。デモポータルのヘッダーには、`access-control` の権限があるユーザーにだけ「アクセス管理」へのリンクを出す
   - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
   - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す
 - 設計判断
