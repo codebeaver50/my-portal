@@ -11,13 +11,16 @@
 
 ```
 app/
-  page.tsx                    # ポータルトップ（feature一覧）
-  (features)/                 # route group。URLには出現しない
-    <feature-slug>/           # 各ポートフォリオアプリケーション（URL: /<feature-slug>）
-      page.tsx
-      _components/            # そのfeature専用のコンポーネント（非ルーティング）
-      _lib/                   # そのfeature専用のロジック（非ルーティング）
-      ...                     # ページを複数持つfeatureはさらにネストしたルートを配置
+  page.tsx                    # サイトトップ（自己紹介・実績への導線）
+  works/ skills/ profile/ contact/  # 自己紹介サイトの各ページ
+  demo-portal/
+    page.tsx                  # ポータルトップ（feature一覧）
+    (features)/               # route group。URLには出現しない
+      <feature-slug>/         # 各ポートフォリオアプリケーション（URL: /demo-portal/<feature-slug>）
+        page.tsx
+        _components/          # そのfeature専用のコンポーネント（非ルーティング）
+        _lib/                 # そのfeature専用のロジック（非ルーティング）
+        ...                   # ページを複数持つfeatureはさらにネストしたルートを配置
 components/
   ui/                         # プロジェクト共通のUIコンポーネントライブラリ（Button, Card等）
 server/
@@ -42,13 +45,15 @@ server/
   ...
 ```
 
-- `app/page.tsx`: ポータルトップ。`(features)/` 配下の各featureへの導線を表示する
-- `app/(features)/<feature-slug>/`: featureごとに1つのポートフォリオアプリケーションを配置する。feature間の依存は持たせない
-  - `(features)` はroute group（括弧付きフォルダ）とし、URLには `/features/` を出さない（例: `sample1` → `/sample1`）
+- `app/page.tsx`: サイトトップ（自己紹介サイト）。`/works`・`/skills`・`/profile`・`/contact` と合わせて、featureとは独立した自己紹介サイトとして扱う
+- `app/demo-portal/page.tsx`: ポータルトップ。`app/_lib/features.ts` の一覧から、`demo-portal/(features)/` 配下の各featureへの導線を表示する
+- `app/demo-portal/(features)/<feature-slug>/`: featureごとに1つのポートフォリオアプリケーションを配置する。feature間の依存は持たせない
+  - `(features)` はroute group（括弧付きフォルダ）とし、URLには `/features/` を出さない（例: `sample1` → `/demo-portal/sample1`）
+  - featureは以前 `/<feature-slug>` で公開していたため、`next.config.ts` の `redirects` で旧URLを `/demo-portal/<feature-slug>` へ恒久リダイレクトしている。この転送対象は移行時点のfeatureに固定した一覧であり、新しく追加するfeatureを足す必要はない
   - feature専用のコンポーネント・ロジックは `_components/` `_lib/` 等のprivate folder（アンダースコア接頭辞）としてfeatureフォルダ内にcolocateし、ルーティングに含めない
 - `components/ui/`: Tailwind CSS v4でスタイリングした共通UIコンポーネント（Button, Card等）を配置する。ポータルトップ・各featureはTailwindのユーティリティクラスを直接書くのではなく、原則としてここのコンポーネントを利用する。外部UIライブラリ（shadcn/ui等）は導入せず、自前のコンポーネントとして育てていく
 - `server/`: Go APIを配置する独立したGoモジュール。Next.js側とは依存を持たない
-  - `internal/features/<feature-slug>/`: featureごとのドメインロジックを配置する。Next.js側の`app/(features)/<feature-slug>/`とfeature-slugを揃え、どのAPIコードがどのfeatureに属すか分かるようにする。package名にハイフンは使えないため、`book-database` → `bookdatabase`のように詰めた名前にする
+  - `internal/features/<feature-slug>/`: featureごとのドメインロジックを配置する。Next.js側の`app/demo-portal/(features)/<feature-slug>/`とfeature-slugを揃え、どのAPIコードがどのfeatureに属すか分かるようにする。package名にハイフンは使えないため、`book-database` → `bookdatabase`のように詰めた名前にする
     - `controller` → `service` → `repository` の3層構成とする。`controller`はGinのHTTPハンドラ（リクエストの読み取りとレスポンス整形のみ）、`service`はビジネスロジック（複数repositoryの組み合わせ、トランザクション境界の管理）、`repository`はGORMによるDBアクセスに専念させる
     - `dto`はAPIリクエスト/レスポンス専用の型を置く。`internal/models`のDBエンティティ（GORM struct）とは別物とし、service層が両者を変換する
     - `router`はfeatureごとに`controller`/`service`/`repository`をコンストラクタで組み立て（DI）、ルートを登録する。`cmd/api/main.go`からはfeatureごとの`router.SetupXxxRoutes(...)`を呼ぶだけにする
@@ -112,10 +117,10 @@ server/
   - `ADMIN_PASSWORD` 環境変数と照合し、一致すれば署名付きセッションCookie（`portal_admin_session`、HMAC署名・有効期限つき、DBには保存しないステートレスな方式）を発行する
   - `POST /api/admin/login` / `POST /api/admin/logout` / `GET /api/admin/session` の3エンドポイントを `admin.RegisterRoutes` で登録する（`cmd/api/main.go` から呼ぶ）
   - `admin.AuthMiddleware()` を各featureの管理者限定エンドポイントに付与する（例: `simple-cms` の記事・カテゴリの作成/更新/削除）
-- フロントエンド側: `app/login/`にポートフォリオ共通のログインページを置く（`app/(features)/`配下ではない。特定のfeatureに属さないため）
+- フロントエンド側: `app/login/`にポートフォリオ共通のログインページを置く（`app/demo-portal/(features)/`配下ではない。特定のfeatureに属さないため）
   - `app/_lib/adminAuth.ts` の `checkIsAdmin()`（Server Component専用、Cookieを中継して`GET /api/admin/session`を叩く）を各featureのページ・レイアウトから呼び、管理者向けUIを出すかどうかを判断する
   - `app/_lib/adminApi.ts` の `adminLogin` / `adminLogout`（Client Component用）
-  - ログインページは `?redirect=/<feature-slug>` を受け取り、ログイン成功後に元のfeatureへ戻す
+  - ログインページは `?redirect=/demo-portal/<feature-slug>` を受け取り、ログイン成功後に元のfeatureへ戻す
   - ポータル共通フッター（`app/_components/SiteFooter.tsx`）に `/login` への導線を常設する
 - 新しいfeatureで管理者限定の操作を追加する場合は、featureごとに認証を作らず、この共通の `admin.AuthMiddleware()` / `checkIsAdmin()` を再利用すること
 
@@ -177,8 +182,8 @@ server/
   - **回答の検証はGo側（`service/record_service.go`）を正とする**。必須チェック・型・メール形式・`YYYY-MM-DD`・選択肢に含まれるか・未知の項目IDの混入を検証し、エラー時は`400`＋`{"error": "...", "fieldErrors": {"<項目ID>": "..."}}`を返す。フロント側（`_lib/schema.ts`）も項目定義からzodスキーマを動的に組み立てて同じ制約で事前チェックするが、制約値（文字数上限等）を変更する場合は両方を揃えること
   - checkboxの値は回答の選択順に依らず、選択肢の定義順で保存する
   - **レイアウトのAPI表現**: 項目は表示順の平らな配列`fields[]`のまま、各項目に`row`を持たせる（行ごとの入れ子配列にはしない）。各項目は`width`も持つ。Go側（`normalizeLayout`）は`row`が配列の先頭から昇順か・1行3項目以内か・幅が3〜12で行の合計が12以内かを検証し、行番号を0からの連番に詰めて保存する。`width`が未指定（0）の項目には行を均等に割った幅を割り当てる。フロント側は`_lib/layout.ts`で行ごとの配列（`FieldDraft[][]`）との変換・挿入・移動を純粋関数として扱う
-- フロントエンド（`app/(features)/form-builder/`）
-  - `/form-builder`（一覧）、`/form-builder/new`・`/[formId]/edit`（フォーム構築画面）、`/[formId]`（回答画面。行ごとに横並び、スマホ幅では縦に積む）、`/[formId]/records`（回答データ一覧）
+- フロントエンド（`app/demo-portal/(features)/form-builder/`）
+  - `/demo-portal/form-builder`（一覧）、`/demo-portal/form-builder/new`・`/[formId]/edit`（フォーム構築画面）、`/[formId]`（回答画面。行ごとに横並び、スマホ幅では縦に積む）、`/[formId]/records`（回答データ一覧）
   - フォーム構築画面（`_components/builder/`）はkintoneのようなドラッグ＆ドロップ式。左のパーツ（入力形式）を右のキャンバス（回答画面と同じ見た目）へドラッグして項目を追加し、配置済みの項目もドラッグで並べ替える。行と行のあいだに落とすと新しい行、行の中の項目の左右に落とすと横並びになる。項目のクリックで設定ダイアログ（項目名・入力形式・選択肢・必須、ドラッグの代替となる「前へ」「後ろへ」）を開く
     - ドラッグ＆ドロップには**React Aria**（Adobe、`react-aria`パッケージ）の`useDrag` / `useDrop`フックのみを使う（見た目は`components/ui`のまま）。採用理由: ①キーボード（Enterで掴む→Tabで落とし先を選ぶ→Enterで置く）・スクリーンリーダーでのドラッグ操作が組み込みで用意されている、②継続的にメンテナンスされている（`@dnd-kit/core`は2024年12月以降更新が止まり後継は0.x、Atlassianのpragmatic-drag-and-dropはキーボード操作のドラッグを自前で用意する必要がある）
     - 落とし先（`DropZone`）は全ての挿入位置に常に描画しておき、ドラッグ中かつ置ける位置だけを有効にする（無効な間は`aria-hidden`・クリック不可）。各落とし先には「2行目の「氏名」の右に挿入」のような読み上げ用ラベルを付ける。満員（3項目）の行や、置いても配置が変わらない位置は無効にする

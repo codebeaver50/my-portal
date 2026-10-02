@@ -13,7 +13,17 @@ export const techStackSections: TechStackSection[] = [
     title: "フロントエンド",
     description:
       "Next.js App Router構成のポータル兼feature集。UIは外部ライブラリに頼らず、Tailwind CSSベースの自前コンポーネントとして育てています。",
-    items: ["Next.js 16 (App Router)", "React 19", "TypeScript", "Tailwind CSS v4", "TanStack Query", "Recharts", "Zod"],
+    items: [
+      "Next.js 16 (App Router)",
+      "React 19",
+      "TypeScript",
+      "Tailwind CSS v4",
+      "TanStack Query",
+      "Zod",
+      "Recharts",
+      "Tiptap",
+      "React Aria",
+    ],
   },
   {
     id: "backend",
@@ -21,7 +31,7 @@ export const techStackSections: TechStackSection[] = [
     title: "API サーバー",
     description:
       "GinでHTTPルーティングし、GORMでMySQLにアクセスするcontroller→service→repositoryの3層構成。featureごとにドメインロジックを分離しています。",
-    items: ["Go", "Gin", "GORM", "golang-migrate"],
+    items: ["Go", "Gin", "GORM", "golang-migrate", "SQLite（テスト用）"],
   },
   {
     id: "database",
