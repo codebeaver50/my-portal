@@ -1,20 +1,15 @@
 "use client";
 
 import { cn } from "@/components/ui";
-import { canDrop } from "../../_lib/layout";
+import { canDrop, maxWidth } from "../../_lib/layout";
+import { COL_SPAN_CLASS } from "../layoutClasses";
 import { CanvasField } from "./CanvasField";
 import { DropZone } from "./DropZone";
+import { WidthHandle } from "./WidthHandle";
 import type { FieldDraft } from "../../_lib/draft";
 import type { DropPosition } from "../../_lib/layout";
 import type { FieldErrors } from "./CanvasField";
 import type { Dragging } from "./dnd";
-
-// 行の項目数ごとの列数。Tailwindがクラス名を検出できるよう静的に列挙する。
-const ROW_GRID_CLASS: Record<number, string> = {
-  1: "grid-cols-1",
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-};
 
 function fieldName(draft: FieldDraft): string {
   return `「${draft.label.trim() || "項目名未設定"}」`;
@@ -47,9 +42,11 @@ type BuilderCanvasProps = {
   onDrop: (position: DropPosition) => void;
   onEdit: (key: string) => void;
   onRemove: (key: string) => void;
+  onResize: (key: string, width: number) => void;
 };
 
 // BuilderCanvas は行ごとに項目を横並びで表示し、行と行のあいだ・行の中の項目の前後に落とし先を置く。
+// 行は12列のグリッドで、各項目は幅（width）の分だけ列を占める。右端のつまみで幅を変えられる。
 export function BuilderCanvas({
   rows,
   dragging,
@@ -61,6 +58,7 @@ export function BuilderCanvas({
   onDrop,
   onEdit,
   onRemove,
+  onResize,
 }: BuilderCanvasProps) {
   const draggedKey = dragging?.kind === "field" ? dragging.key : undefined;
   const zone = (position: DropPosition, variant: "row" | "column-start" | "column-end" | "end") => (
@@ -78,9 +76,9 @@ export function BuilderCanvas({
       {rows.map((row, rowIndex) => (
         <div key={row[0].key} className="flex flex-col">
           <div className="relative h-4">{zone({ kind: "newRow", rowIndex }, "row")}</div>
-          <div className={cn("grid gap-4", ROW_GRID_CLASS[row.length])}>
+          <div data-layout-row className="grid grid-cols-12 gap-x-4">
             {row.map((draft, columnIndex) => (
-              <div key={draft.key} className="relative min-w-0">
+              <div key={draft.key} className={cn("relative min-w-0", COL_SPAN_CLASS[draft.width])}>
                 {zone({ kind: "inRow", rowIndex, columnIndex }, "column-start")}
                 <CanvasField
                   draft={draft}
@@ -91,6 +89,12 @@ export function BuilderCanvas({
                   onDragEnd={onDragEnd}
                   onEdit={onEdit}
                   onRemove={onRemove}
+                />
+                <WidthHandle
+                  fieldName={fieldName(draft)}
+                  width={draft.width}
+                  maxWidth={maxWidth(rows, draft.key)}
+                  onResize={(width) => onResize(draft.key, width)}
                 />
                 {columnIndex === row.length - 1
                   ? zone({ kind: "inRow", rowIndex, columnIndex: columnIndex + 1 }, "column-end")

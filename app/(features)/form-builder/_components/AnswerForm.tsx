@@ -4,18 +4,12 @@ import { useId, useState } from "react";
 import { Button, Card, LinkButton, cn, useToast } from "@/components/ui";
 import { ApiError } from "../_lib/api";
 import { toRows } from "../_lib/layout";
+import { SM_COL_SPAN_CLASS } from "./layoutClasses";
 import { validateAnswer } from "../_lib/schema";
 import { useCreateRecord } from "../_lib/useForms";
 import { FieldInput } from "./FieldInput";
 import type { AnswerDraft } from "../_lib/schema";
 import type { Form } from "../_lib/types";
-
-// 行の項目数ごとの列数。スマホ幅では縦に積み、sm以上で横に並べる。
-const ROW_GRID_CLASS: Record<number, string> = {
-  1: "sm:grid-cols-1",
-  2: "sm:grid-cols-2",
-  3: "sm:grid-cols-3",
-};
 
 function emptyDraft(form: Form): AnswerDraft {
   return Object.fromEntries(form.fields.map((field) => [String(field.id), field.type === "checkbox" ? [] : ""]));
@@ -88,18 +82,20 @@ export function AnswerForm({ form }: { form: Form }) {
   return (
     <Card className="mx-auto w-full max-w-3xl justify-start gap-5">
       {toRows(form.fields).map((row) => (
-        <div key={row[0].id} className={cn("grid grid-cols-1 gap-5", ROW_GRID_CLASS[row.length])}>
+        // スマホ幅では縦に積み、sm以上で12列のグリッドに幅どおり横並びにする。
+        <div key={row[0].id} className="grid grid-cols-1 gap-5 sm:grid-cols-12">
           {row.map((field) => {
             const key = String(field.id);
             return (
-              <FieldInput
-                key={field.id}
-                id={`${idPrefix}-${field.id}`}
-                field={field}
-                value={draft[key] ?? ""}
-                error={fieldErrors[key]}
-                onChange={(value) => handleChange(key, value)}
-              />
+              <div key={field.id} className={cn("min-w-0", SM_COL_SPAN_CLASS[field.width])}>
+                <FieldInput
+                  id={`${idPrefix}-${field.id}`}
+                  field={field}
+                  value={draft[key] ?? ""}
+                  error={fieldErrors[key]}
+                  onChange={(value) => handleChange(key, value)}
+                />
+              </div>
             );
           })}
         </div>

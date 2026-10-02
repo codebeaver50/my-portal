@@ -21,6 +21,8 @@ export type FormField = {
   options: string[];
   // 表示する行（0始まり）。同じ行の項目は横並びで表示する。
   row: number;
+  // 1行を12等分した単位での幅（3〜12）。同じ行の合計は12以内。
+  width: number;
 };
 
 export type Form = {
@@ -50,6 +52,7 @@ export type FormFieldInput = {
   required: boolean;
   options: string[];
   row: number;
+  width: number;
 };
 
 // fields は表示順（行ごとに左から右）に並べ、row は先頭から昇順にする。

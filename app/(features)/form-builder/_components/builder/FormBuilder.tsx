@@ -4,7 +4,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input, Textarea, useToast } from "@/components/ui";
 import { draftRowsFromForm, newDraft, toFieldInputs } from "../../_lib/draft";
-import { insertItem, moveItem, removeItem, stepPosition } from "../../_lib/layout";
+import { insertItem, moveItem, removeItem, resizeItem, stepPosition } from "../../_lib/layout";
 import { MAX_FIELDS, formSchema } from "../../_lib/schema";
 import { useCreateForm, useUpdateForm } from "../../_lib/useForms";
 import { BuilderCanvas } from "./BuilderCanvas";
@@ -87,6 +87,10 @@ export function FormBuilder({ form }: FormBuilderProps) {
   function handleRemove(key: string) {
     setRows((current) => removeItem(current, key));
     setErrors((current) => withoutFieldErrors(current, key));
+  }
+
+  function handleResize(key: string, width: number) {
+    setRows((current) => resizeItem(current, key, width));
   }
 
   function handleSaveField(draft: FieldDraft) {
@@ -217,6 +221,7 @@ export function FormBuilder({ form }: FormBuilderProps) {
             onDrop={handleDrop}
             onEdit={setEditingKey}
             onRemove={handleRemove}
+            onResize={handleResize}
           />
         </Card>
 

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { hasOptions } from "./fieldTypes";
-import { MAX_FIELDS_PER_ROW, toRows } from "./layout";
+import { GRID_COLUMNS, MAX_FIELDS_PER_ROW, MIN_FIELD_WIDTH, toRows } from "./layout";
 import { FIELD_TYPES } from "./types";
 import type { FormField, RecordValue, RecordValues } from "./types";
 
@@ -29,6 +29,7 @@ export const formFieldSchema = z
       z.string().trim().min(1).max(MAX_OPTION_LENGTH, `選択肢は${MAX_OPTION_LENGTH}文字以内で入力してください`),
     ),
     row: z.number().int().min(0),
+    width: z.number().int().min(MIN_FIELD_WIDTH).max(GRID_COLUMNS),
   })
   .superRefine((field, ctx) => {
     if (!hasOptions(field.type)) return;
@@ -56,6 +57,10 @@ export const formSchema = z.object({
     .refine(
       (fields) => toRows(fields).every((row) => row.length <= MAX_FIELDS_PER_ROW),
       `1行に並べられる項目は${MAX_FIELDS_PER_ROW}個までです`,
+    )
+    .refine(
+      (fields) => toRows(fields).every((row) => row.reduce((sum, field) => sum + field.width, 0) <= GRID_COLUMNS),
+      `1行の項目の幅の合計は${GRID_COLUMNS}以内にしてください`,
     ),
 });
 
