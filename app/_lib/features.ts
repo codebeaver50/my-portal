@@ -14,7 +14,7 @@ export const features: Feature[] = [
     description: "国立国会図書館サーチ・openBDから収集した今月発売されるIT関連書籍の一覧です。",
     category: "DATABASE SYSTEM",
     status: "available",
-    techStack: ["Next.js", "Go", "MySQL", "NDL Search API", "openBD API"],
+    techStack: ["Next.js", "Go", "MySQL", "TanStack Query", "NDL Search API", "openBD API"],
   },
   {
     slug: "simple-ledger",
@@ -22,7 +22,7 @@ export const features: Feature[] = [
     description: "複式簿記ベースの取引管理・分析ができるシンプルな家計簿アプリです。",
     category: "LEDGER SYSTEM",
     status: "available",
-    techStack: ["Next.js", "Go", "MySQL"],
+    techStack: ["Next.js", "Go", "MySQL", "TanStack Query", "Zod", "Recharts"],
   },
   {
     slug: "simple-cms",
@@ -30,7 +30,7 @@ export const features: Feature[] = [
     description: "カテゴリ分けとリッチテキスト編集ができる、シンプルな記事投稿・閲覧アプリです。",
     category: "CMS",
     status: "available",
-    techStack: ["Next.js", "Go", "MySQL", "Tiptap"],
+    techStack: ["Next.js", "Go", "MySQL", "TanStack Query", "Zod", "Tiptap"],
   },
   {
     slug: "form-builder",
@@ -38,7 +38,7 @@ export const features: Feature[] = [
     description: "項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるアプリです。",
     category: "FORM & DATABASE",
     status: "available",
-    techStack: ["Next.js", "Go", "MySQL"],
+    techStack: ["Next.js", "Go", "MySQL", "TanStack Query", "Zod", "React Aria"],
   },
   {
     slug: "shop-css",
