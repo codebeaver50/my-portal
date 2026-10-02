@@ -77,6 +77,7 @@ server/
   ```
 - 新しいマイグレーションを追加する場合は `server/migrations/` に連番のup/downファイルを追加する（例: `000002_xxx.up.sql` / `000002_xxx.down.sql`）
 - テーブル名はfeature単位で `<feature-slug>_` のprefixを付ける（例: `book-database` featureのテーブルは `book_database_books` のように `book_database_` を付与）。単一のMySQLインスタンス・単一スキーマを複数featureで共有するため、feature間のテーブル名衝突を防ぐ
+  - feature横断の共通テーブル（後述「アクセス管理（RBAC）」）は `portal_` を付ける（例: `portal_users`）
 
 ## 主要な設計判断
 
@@ -124,6 +125,29 @@ server/
   - ポータル共通フッター（`app/_components/SiteFooter.tsx`）に `/login` への導線を常設する
 - 新しいfeatureで管理者限定の操作を追加する場合は、featureごとに認証を作らず、この共通の `admin.AuthMiddleware()` / `checkIsAdmin()` を再利用すること
 
+## アクセス管理（RBAC、構築中）
+
+- 目的: 商用システム並みのアクセス管理をポートフォリオとして示す。ユーザーにロールを割り当て、ロールごとにリソース（feature・アクセス管理画面）への権限レベルを設定する。前述の「管理者ログイン（`ADMIN_PASSWORD`）」は最終的にこの仕組みへ置き換える（現時点では併存）
+- 実装場所: `server/internal/accesscontrol/`（feature非依存の共通処理だが、今後ユーザー・ロールの管理APIも載せるため、featureと同じ `controller` / `service` / `repository` / `dto` / `router` 構成にしている）
+  - `permission/`: リソースの一覧（`Resources`）と権限レベル（`none` < `read` < `write`、writeはreadを含む）の純粋な定義。リソースはNext.js側のfeature-slugと揃え、featureを追加したらここにも追加する。書き込み操作のないリソース（`shop-css`）は `MaxLevel` を `read` にする
+  - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
+- テーブル（`server/migrations/000005_create_portal_access_control_tables.*.sql`）
+  - `portal_users`（`password_hash`はbcrypt）/ `portal_roles` / `portal_user_roles`（多対多）/ `portal_role_permissions`（ロール×リソース→`read`/`write`、行がなければ`none`）/ `portal_sessions`
+  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-admin` / `demo-editor` / `demo-viewer`（パスワードはいずれも `demo-pass`）を入れている
+- 権限の決まり方: ユーザーの権限は、割り当てられた全ロールとゲストロールの権限の和集合（リソースごとに最も強いもの）。未ログインの訪問者にはゲストロール（`code = 'guest'`）の権限を適用する。ゲストロールを常に含めるのは、ログインしたことで未ログインのときより権限が弱くなることがないようにするため
+- API（`/api/auth`）
+  ```
+  POST /login    ログインIDとパスワードでログインし、セッションCookie（portal_session）を発行する
+  POST /logout   セッションをDBから削除し、Cookieを消す
+  GET  /session  ログイン中のユーザー（未ログインならnull）と、全リソースの権限レベルを返す
+  ```
+- 設計判断
+  - **セッションはDBに保存する**（`ADMIN_PASSWORD`方式のHMAC署名Cookieのようなステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
+  - CookieはHttpOnly・SameSite=Lax（本番のReleaseModeではSecureも付ける）。SameSite=LaxによりほかのサイトからのPOSTにCookieが付かないため、CSRFトークンは持たない
+  - **ログインの失敗**: ログインIDが存在しない・パスワードが違う・ユーザーが無効化されている、はすべて同じ`401`にする（ログインIDの存在を推測させない）。存在しないログインIDでもbcryptの比較を1回行い、応答時間の差も出さない。5回連続で失敗するとそのアカウントを15分ロックし、ロック中は`429`を返す
+  - パスワードは72文字まで（bcryptは72バイトを超える部分を無視するため）
+  - `/api/auth/login`・`/api/auth/logout` はセッションの行を書き込むが、デモデータは変更しないため、READ_ONLYの除外リストに入れている
+
 ## CI/CD（GitHub Actions）
 
 - `.github/workflows/ci.yml`: `main`へのpush・PRで lint / build / go vet / go test を実行する
@@ -146,7 +170,7 @@ server/
 - 目的: 各featureは基本的に「誰でも編集・削除できる公開デモ」（例: `simple-ledger`）として作る方針のため、本番でシードデータやデモデータをいたずらに書き換えられたくない場合に、書き込み系エンドポイントだけを丸ごと止められるようにしている
 - 挙動: `server/cmd/api/main.go` の `readOnlyMiddleware` がGinのグローバルミドルウェアとして登録されている。`READ_ONLY=true`（`.env.prod`）のとき、`GET`/`HEAD`/`OPTIONS`以外の全リクエスト（`POST`/`PUT`/`PATCH`/`DELETE`）を、除外リストに載っているルートを除いて`403`＋`{"error": "..."}`で拒否する。未設定・`false`のときは通常どおり書き込みを許可する
 - **除外ルール**: `cmd/api/main.go` の `readOnlyMiddleware(readOnly, "/api/books/sync")` の第2引数以降が除外パスのリスト。あるエンドポイントを除外してよいかどうかは以下で判断する
-  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/admin/login`・`/api/admin/logout`と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「管理者ログイン（ポートフォリオ共通）」の`admin.AuthMiddleware`付き）
+  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/admin/login`・`/api/admin/logout`・`/api/auth/login`・`/api/auth/logout`（ログイン処理自体。セッションを書き込むがデモデータは変更しない）と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「管理者ログイン（ポートフォリオ共通）」の`admin.AuthMiddleware`付き）
   - ✅ 除外してよい（認可なし、DB/デモデータ非変更）: 認可のない公開エンドポイントでも、DB上のシードデータ・デモデータを一切変更せず、外部への副作用（メール送信等）のみを行うもの。例: `/api/contact`（`internal/contact`、問い合わせ内容をメール転送するだけでDBに書き込まない）。READ_ONLYの目的は「公開デモのシードデータ保護」であり、こうしたエンドポイントはその対象外になる
   - ❌ 除外してはいけない: フロントエンドの画面操作（ボタンクリック等）から到達する、認可のない**DB書き込みを伴う**公開エンドポイント。例: `simple-ledger`の取引作成・更新・削除
   - 新しいfeatureでcron専用・管理者専用の更新エンドポイントを追加した場合は、必ずそのエンドポイント自身にも認可（bearer tokenチェック等）を実装したうえで、`main.go`の除外リストに追記すること。DB/デモデータを変更する認可なしエンドポイントを除外リストに入れてはいけない
