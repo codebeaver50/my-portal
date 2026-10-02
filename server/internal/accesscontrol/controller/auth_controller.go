@@ -54,6 +54,13 @@ func (ctrl *authController) Login() gin.HandlerFunc {
 			return
 		}
 
+		// 別のアカウントでログインし直した場合、上書きされて使われなくなる前のセッションを消しておく
+		if previous, _ := c.Cookie(middleware.SessionCookieName); previous != "" {
+			if err := ctrl.service.Logout(c.Request.Context(), previous); err != nil {
+				log.Printf("accesscontrol: failed to delete the previous session: %v", err)
+			}
+		}
+
 		setSessionCookie(c, token)
 		c.JSON(http.StatusOK, service.ToSessionResponse(principal))
 	}

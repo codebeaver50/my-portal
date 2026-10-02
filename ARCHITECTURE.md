@@ -141,11 +141,16 @@ server/
   POST /logout   セッションをDBから削除し、Cookieを消す
   GET  /session  ログイン中のユーザー（未ログインならnull）と、全リソースの権限レベルを返す
   ```
+- フロントエンド
+  - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。デモ用アカウントの一覧を載せ、選ぶとログインIDとパスワードが入力される
+  - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
+  - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す。フッターの `/login`（`ADMIN_PASSWORD`方式）は置き換えまで残している
 - 設計判断
   - **セッションはDBに保存する**（`ADMIN_PASSWORD`方式のHMAC署名Cookieのようなステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
   - CookieはHttpOnly・SameSite=Lax（本番のReleaseModeではSecureも付ける）。SameSite=LaxによりほかのサイトからのPOSTにCookieが付かないため、CSRFトークンは持たない
   - **ログインの失敗**: ログインIDが存在しない・パスワードが違う・ユーザーが無効化されている、はすべて同じ`401`にする（ログインIDの存在を推測させない）。存在しないログインIDでもbcryptの比較を1回行い、応答時間の差も出さない。5回連続で失敗するとそのアカウントを15分ロックし、ロック中は`429`を返す
   - パスワードは72文字まで（bcryptは72バイトを超える部分を無視するため）
+  - ログイン済みの状態で別のアカウントにログインし直した場合、それまでのセッションはDBから削除する
   - `/api/auth/login`・`/api/auth/logout` はセッションの行を書き込むが、デモデータは変更しないため、READ_ONLYの除外リストに入れている
 
 ## CI/CD（GitHub Actions）
