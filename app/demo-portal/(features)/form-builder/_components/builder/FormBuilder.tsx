@@ -3,6 +3,7 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Input, Textarea, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { draftRowsFromForm, newDraft, toFieldInputs } from "../../_lib/draft";
 import { insertItem, moveItem, removeItem, resizeItem, stepPosition } from "../../_lib/layout";
 import { MAX_FIELDS, formSchema } from "../../_lib/schema";
@@ -44,6 +45,7 @@ export function FormBuilder({ form }: FormBuilderProps) {
   const { showToast } = useToast();
   const createMutation = useCreateForm();
   const updateMutation = useUpdateForm();
+  const saveBlockedReason = useWriteBlockedReason("form-builder", "保存");
   const idPrefix = useId();
 
   const nextKey = useRef(0);
@@ -231,7 +233,7 @@ export function FormBuilder({ form }: FormBuilderProps) {
           <Button variant="secondary" className="sm:w-auto" onClick={() => router.back()}>
             キャンセル
           </Button>
-          <Button className="sm:w-auto" disabled={isPending} onClick={handleSubmit}>
+          <Button className="sm:w-auto" disabled={isPending} onClick={handleSubmit} blockedReason={saveBlockedReason}>
             {isPending ? "保存中..." : isEdit ? "変更を保存" : "フォームを作成"}
           </Button>
         </div>

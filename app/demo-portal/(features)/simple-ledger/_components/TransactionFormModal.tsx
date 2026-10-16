@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Modal, Select, Textarea, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useChartOfAccounts, useCreateTransaction, useUpdateTransaction } from "../_lib/useTransactions";
 import { transactionSchema } from "../_lib/schema";
 import { TrashIcon } from "./icons";
@@ -57,6 +58,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Transaction
   const { data: accounts = [] } = useChartOfAccounts();
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
+  const saveBlockedReason = useWriteBlockedReason("simple-ledger", "保存");
   const { showToast } = useToast();
 
   const [date, setDate] = useState(transaction?.date ?? new Date().toISOString().slice(0, 10));
@@ -145,7 +147,7 @@ export function TransactionFormModal({ open, onClose, transaction }: Transaction
           <Button variant="secondary" className="w-auto" onClick={resetAndClose}>
             キャンセル
           </Button>
-          <Button className="w-auto" onClick={handleSubmit} disabled={isPending || !isBalanced}>
+          <Button className="w-auto" onClick={handleSubmit} disabled={isPending || !isBalanced} blockedReason={saveBlockedReason}>
             {isPending ? "保存中..." : isEdit ? "更新" : "保存"}
           </Button>
         </>

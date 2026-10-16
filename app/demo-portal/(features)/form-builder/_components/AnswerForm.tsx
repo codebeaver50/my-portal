@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { Button, Card, LinkButton, cn, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { ApiError } from "../_lib/api";
 import { toRows } from "../_lib/layout";
 import { SM_COL_SPAN_CLASS } from "./layoutClasses";
@@ -19,6 +20,7 @@ export function AnswerForm({ form }: { form: Form }) {
   const idPrefix = useId();
   const { showToast } = useToast();
   const createMutation = useCreateRecord(form.id);
+  const submitBlockedReason = useWriteBlockedReason("form-builder", "回答を送信");
 
   const [draft, setDraft] = useState<AnswerDraft>(() => emptyDraft(form));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -103,7 +105,7 @@ export function AnswerForm({ form }: { form: Form }) {
       <p className="text-xs text-muted-foreground">
         <span className="text-danger">*</span> は必須項目です
       </p>
-      <Button disabled={createMutation.isPending} onClick={handleSubmit}>
+      <Button disabled={createMutation.isPending} onClick={handleSubmit} blockedReason={submitBlockedReason}>
         {createMutation.isPending ? "送信中..." : "回答を送信"}
       </Button>
     </Card>

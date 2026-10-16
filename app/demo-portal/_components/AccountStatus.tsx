@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
 import { fetchSession, logout } from "../_lib/auth";
 import type { Session } from "../_lib/auth";
+import { notifySessionChange } from "../_lib/useSession";
 
 const loginPath = "/demo-portal/login";
 const accessControlPath = "/demo-portal/access-control";
@@ -34,6 +35,7 @@ export function AccountStatus() {
     try {
       await logout();
       setSession(await fetchSession());
+      notifySessionChange();
     } finally {
       setIsPending(false);
       // 各featureのServer Componentがログイン状態を再判定できるよう、現在のルートのキャッシュを破棄する。

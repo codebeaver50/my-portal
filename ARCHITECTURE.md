@@ -129,6 +129,15 @@ server/
 - 実装場所: `server/internal/accesscontrol/`（feature非依存の共通処理だが、今後ユーザー・ロールの管理APIも載せるため、featureと同じ `controller` / `service` / `repository` / `dto` / `router` 構成にしている）
   - `permission/`: リソースの一覧（`Resources`）と権限レベル（`none` < `read` < `write`、writeはreadを含む）の純粋な定義。リソースはNext.js側のfeature-slugと揃え、featureを追加したらここにも追加する。書き込み操作のないリソース（`shop-css`）は `MaxLevel` を `read` にする
   - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
+- featureの権限チェック
+  - Go側（正）: 各featureの `router` で、書き込み系のルートだけをまとめたグループに `middleware.Authenticate(authSvc)` と `middleware.Require(<リソース>, permission.Write)` を付ける。`authSvc` は `cmd/api/main.go` で `accesscontrolrouter.SetupAuthRoutes` の戻り値を各featureの `SetupXxxRoutes` に渡す。現在対象にしているのは `simple-ledger`（取引の作成・更新・削除）と `form-builder`（フォーム・回答の作成・更新・削除）。読み取り系（`GET`）には付けていない（SSR時のサーバー間通信がCookieを持たないため。ゲストロールには全featureの `read` を付けている）
+  - `simple-cms` は旧方式の `admin.AuthMiddleware()` のまま（`ADMIN_PASSWORD` 方式の置き換えとあわせて移行する）。`book-database` の書き込みは `CRON_SECRET` で保護した `/api/books/sync` のみ
+  - フロントエンド側（表示の切り替えのみ）: **`read` 権限は「画面の操作は試せるが、保存・削除はできない」として扱う**。作成・編集の画面やダイアログは誰でも開けるが、保存・削除・回答の送信ボタンだけを押せなくし、理由をツールチップで出す
+    - `app/demo-portal/_lib/useSession.ts` の `useWriteBlockedReason(<リソース>, <操作名>)` が、`write` 権限がなければ理由（未ログインなら「保存するにはログインが必要です」、ログイン済みなら「保存する権限がありません」）を返し、それを `components/ui` の `Button` の `blockedReason` に渡す。セッションの取得中・取得失敗時も押せない側に倒す
+    - `blockedReason` 付きの `Button` は `disabled` ではなく `aria-disabled` にする（`disabled` だとフォーカスもホバーのイベントも受け取れず、キーボード・スクリーンリーダー・ホバーで理由を伝えられないため）。クリックしても `onClick`・フォームの送信は行わない
+    - ツールチップ（`components/ui/Tooltip.tsx`）はホバー・フォーカス・タップで表示し、`aria-describedby` で読み上げにも対応する。表やモーダルのスクロール領域で切れないよう、`body` へのポータルに `fixed` で配置する。ツールチップの中にはリンクを置かない（ホバーが外れると消えるため）。ログインへの導線はヘッダーの「ログイン」に任せる
+  - 書き込み系の `fetch` には `credentials: "include"` を付けてセッションCookieを送る
+  - ヘッダーからログアウトしたときは `notifySessionChange()`（`portal:session-change` イベント）で、表示中のページの `useSession` も取得し直す
 - テーブル（`server/migrations/000005_create_portal_access_control_tables.*.sql`）
   - `portal_users`（`password_hash`はbcrypt）/ `portal_roles` / `portal_user_roles`（多対多）/ `portal_role_permissions`（ロール×リソース→`read`/`write`、行がなければ`none`）/ `portal_sessions`
   - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-guest`（`viewer`ロール、パスワード `demo-pass`）を入れている。`demo-guest` のログイン情報はログイン画面に載せている公開情報
@@ -206,7 +215,7 @@ server/
 
 ## カスタムフォームビルダー（form-builder）
 
-- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。他の公開デモと同様、誰でも作成・編集・削除できる（`READ_ONLY=true`の本番では書き込みがすべて止まる。管理者限定にはしていない）
+- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。フォーム・回答の保存・削除（回答の投稿を含む）には、アクセス管理（RBAC）で `form-builder` の `write` 権限が必要。構築画面等の操作は `read` 権限でも試せる（後述「アクセス管理（RBAC）」の「featureの権限チェック」を参照。`READ_ONLY=true`の本番では権限にかかわらず書き込みがすべて止まる）
 - テーブル（`server/migrations/000004_create_form_builder_tables.*.sql`、シードデータとしてフォーム3件・回答17件を含む）
   - `form_builder_forms`: フォーム本体
   - `form_builder_form_fields`: 項目定義。`type`は`text` / `textarea` / `number` / `email` / `date` / `select` / `radio` / `checkbox`。`options`（JSON配列）は`select`/`radio`/`checkbox`の選択肢で、それ以外は`[]`
