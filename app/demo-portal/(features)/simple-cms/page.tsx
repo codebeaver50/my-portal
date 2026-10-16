@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { checkIsAdmin } from "@/app/_lib/adminAuth";
 import { AdminHeader } from "./_components/AdminHeader";
 import { PostList } from "./_components/PostList";
 import { fetchPosts } from "./_lib/api";
@@ -23,12 +22,12 @@ async function loadInitialPosts(): Promise<Post[]> {
 }
 
 export default async function SimpleCmsPage() {
-  const [posts, isAdmin] = await Promise.all([loadInitialPosts(), checkIsAdmin()]);
+  const posts = await loadInitialPosts();
 
   return (
     <>
-      {isAdmin ? <AdminHeader /> : null}
-      <PostList initialPosts={posts} isAdmin={isAdmin} />
+      <AdminHeader />
+      <PostList initialPosts={posts} />
     </>
   );
 }

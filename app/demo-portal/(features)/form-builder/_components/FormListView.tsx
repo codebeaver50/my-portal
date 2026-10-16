@@ -12,6 +12,7 @@ import {
   Modal,
   useToast,
 } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useDeleteForm, useForms } from "../_lib/useForms";
 import { PlusIcon, TrashIcon } from "./icons";
 import type { FormSummary } from "../_lib/types";
@@ -21,6 +22,7 @@ export function FormListView() {
   const [deleting, setDeleting] = useState<FormSummary | null>(null);
   const deleteMutation = useDeleteForm();
   const { showToast } = useToast();
+  const deleteBlockedReason = useWriteBlockedReason("form-builder", "削除");
 
   function handleDelete() {
     if (!deleting) return;
@@ -109,7 +111,13 @@ export function FormListView() {
             <Button variant="secondary" className="w-auto" onClick={() => setDeleting(null)}>
               キャンセル
             </Button>
-            <Button variant="danger" className="w-auto" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            <Button
+              variant="danger"
+              className="w-auto"
+              disabled={deleteMutation.isPending}
+              onClick={handleDelete}
+              blockedReason={deleteBlockedReason}
+            >
               削除する
             </Button>
           </>

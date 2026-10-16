@@ -8,7 +8,7 @@ export default function FormBuilderLayout({ children }: LayoutProps<"/demo-porta
       <PageContainer>
         <PageHeader
           title="カスタムフォームビルダー"
-          description="項目を組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるデモアプリです。閲覧中のフォームと回答は誰でも編集・削除できる共有データです。"
+          description="項目を組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるデモアプリです。画面の操作は誰でも試せますが、保存・削除には編集権限のあるアカウントでのログインが必要です。"
         />
         <TabNav
           items={[

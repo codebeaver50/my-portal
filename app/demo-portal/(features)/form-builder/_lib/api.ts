@@ -61,6 +61,7 @@ export async function fetchForm(id: number, init?: RequestInit): Promise<Form | 
 export async function createForm(input: FormInput): Promise<Form> {
   const response = await fetch(formsUrl(), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -73,6 +74,7 @@ export async function createForm(input: FormInput): Promise<Form> {
 export async function updateForm(id: number, input: FormInput): Promise<Form> {
   const response = await fetch(formsUrl(`/${id}`), {
     method: "PUT",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -83,7 +85,7 @@ export async function updateForm(id: number, input: FormInput): Promise<Form> {
 }
 
 export async function deleteForm(id: number): Promise<void> {
-  const response = await fetch(formsUrl(`/${id}`), { method: "DELETE" });
+  const response = await fetch(formsUrl(`/${id}`), { method: "DELETE", credentials: "include" });
   if (!response.ok) {
     throw await toApiError(response, "フォームの削除に失敗しました");
   }
@@ -106,6 +108,7 @@ export async function fetchRecords(
 export async function createRecord(formId: number, input: RecordInput): Promise<FormRecord> {
   const response = await fetch(formsUrl(`/${formId}/records`), {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -116,7 +119,7 @@ export async function createRecord(formId: number, input: RecordInput): Promise<
 }
 
 export async function deleteRecord(formId: number, recordId: number): Promise<void> {
-  const response = await fetch(formsUrl(`/${formId}/records/${recordId}`), { method: "DELETE" });
+  const response = await fetch(formsUrl(`/${formId}/records/${recordId}`), { method: "DELETE", credentials: "include" });
   if (!response.ok) {
     throw await toApiError(response, "回答の削除に失敗しました");
   }

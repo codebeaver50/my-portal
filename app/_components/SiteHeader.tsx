@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PageContainer } from "@/components/ui";
 import { cn } from "@/components/ui/cn";
+import { AccountStatus } from "../demo-portal/_components/AccountStatus";
 
 type NavItem = {
   label: string;
@@ -23,8 +24,8 @@ const navItems: NavItem[] = [
   { label: "Contact", href: "/contact" },
 ];
 
-// デモポータル（/demo-portal 配下）は別タブで開くアプリとして扱い、自己紹介サイトのメニューを出さず、
-// ロゴもデモポータルのトップへ戻るリンクにする
+// デモポータル（/demo-portal 配下）は別タブで開くアプリとして扱い、自己紹介サイトのメニューの代わりに
+// ログイン状態を出し、ロゴもデモポータルのトップへ戻るリンクにする
 function isDemoPortal(pathname: string) {
   return pathname === "/demo-portal" || pathname.startsWith("/demo-portal/");
 }
@@ -125,7 +126,9 @@ export function SiteHeader() {
               {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
             </button>
           </>
-        ) : null}
+        ) : (
+          <AccountStatus />
+        )}
       </PageContainer>
 
       {!inDemoPortal && isMenuOpen ? (

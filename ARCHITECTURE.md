@@ -27,6 +27,7 @@ server/
   go.mod
   cmd/api/main.go             # エントリポイント（Goの標準的なcmd/レイアウト）
   cmd/migrate/main.go         # DBマイグレーション適用コマンド
+  cmd/createuser/main.go      # アクセス管理（RBAC）のユーザー作成コマンド（管理者アカウント等）
   migrations/                 # SQLマイグレーションファイル（golang-migrate形式）
   internal/
     db/                       # feature非依存の共通処理（GORMのDB接続等）
@@ -77,6 +78,7 @@ server/
   ```
 - 新しいマイグレーションを追加する場合は `server/migrations/` に連番のup/downファイルを追加する（例: `000002_xxx.up.sql` / `000002_xxx.down.sql`）
 - テーブル名はfeature単位で `<feature-slug>_` のprefixを付ける（例: `book-database` featureのテーブルは `book_database_books` のように `book_database_` を付与）。単一のMySQLインスタンス・単一スキーマを複数featureで共有するため、feature間のテーブル名衝突を防ぐ
+  - feature横断の共通テーブル（後述「アクセス管理（RBAC）」）は `portal_` を付ける（例: `portal_users`）
 
 ## 主要な設計判断
 
@@ -94,9 +96,9 @@ server/
 ## 本番デプロイ（AWS Lightsail）
 
 - 対象: Lightsail **Instance**（VPS）1台。Lightsail Container Serviceは使わない（MySQLをコンテナで動かし永続化したいため、ステートレス前提のマネージドコンテナサービスと相性が悪い）
-- 構成ファイル: リポジトリルートの `docker-compose.prod.yml`（ローカル開発用の`docker-compose.yml`とは別物）。`web`（Next.js）・`api`（Go）・`mysql`・`caddy`・`migrate`（一時実行専用）の5サービス
+- 構成ファイル: リポジトリルートの `docker-compose.prod.yml`（ローカル開発用の`docker-compose.yml`とは別物）。`web`（Next.js）・`api`（Go）・`mysql`・`caddy`・`migrate`（一時実行専用）・`createuser`（一時実行専用、`profiles: ["tools"]`で`up`の対象外）の6サービス
   - `Dockerfile`（ルート、Next.js用）: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build。`NEXT_PUBLIC_API_BASE_URL` はビルド時にJSへ埋め込まれるため、`docker compose build` 時にbuild argとして渡す
-  - `server/Dockerfile`: `api`・`migrate` 両方のバイナリを1つのイメージに含め、`docker-compose.prod.yml`側でどちらを起動するかを切り替える
+  - `server/Dockerfile`: `api`・`migrate`・`createuser` のバイナリを1つのイメージに含め、`docker-compose.prod.yml`側でどれを起動するかを切り替える
   - `Caddyfile`: 単一の公開ドメインで、`/api/*`・`/health` を`api`コンテナへ、それ以外を`web`コンテナへリバースプロキシする。Let's Encrypt証明書の取得・更新もCaddyが自動で行う
 - 環境変数は `.env.prod`（git管理しない、Lightsail Instance上にのみ置く）にまとめ、`docker compose --env-file .env.prod -f docker-compose.prod.yml ...` で読み込む（`DOMAIN` / `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` / `CRON_SECRET` / `READ_ONLY`）。`READ_ONLY`の詳細は後述の「READ_ONLYモード」を参照
 - マイグレーションは常時起動サービスにせず、`docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm migrate up` で都度実行する
@@ -110,19 +112,64 @@ server/
   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
   ```
 
-## 管理者ログイン（ポートフォリオ共通）
+## アクセス管理（RBAC、構築中）
 
-- 目的: 各featureは基本的に「誰でも編集・削除できる公開デモ」として作る方針だが、一部のfeature（例: `simple-cms`）は特定の操作を管理者（＝サイト運営者本人）限定にしたい。featureごとに認証を作らず、ポートフォリオ全体で共通の管理者ログインを1つ持ち、各featureはそれを参照するだけにする
-- 実装場所: `server/internal/admin/`（`internal/features/<feature-slug>/` の配下ではなく、`internal/db/` と同様のfeature非依存の共通処理として置く）
-  - `ADMIN_PASSWORD` 環境変数と照合し、一致すれば署名付きセッションCookie（`portal_admin_session`、HMAC署名・有効期限つき、DBには保存しないステートレスな方式）を発行する
-  - `POST /api/admin/login` / `POST /api/admin/logout` / `GET /api/admin/session` の3エンドポイントを `admin.RegisterRoutes` で登録する（`cmd/api/main.go` から呼ぶ）
-  - `admin.AuthMiddleware()` を各featureの管理者限定エンドポイントに付与する（例: `simple-cms` の記事・カテゴリの作成/更新/削除）
-- フロントエンド側: `app/login/`にポートフォリオ共通のログインページを置く（`app/demo-portal/(features)/`配下ではない。特定のfeatureに属さないため）
-  - `app/_lib/adminAuth.ts` の `checkIsAdmin()`（Server Component専用、Cookieを中継して`GET /api/admin/session`を叩く）を各featureのページ・レイアウトから呼び、管理者向けUIを出すかどうかを判断する
-  - `app/_lib/adminApi.ts` の `adminLogin` / `adminLogout`（Client Component用）
-  - ログインページは `?redirect=/demo-portal/<feature-slug>` を受け取り、ログイン成功後に元のfeatureへ戻す
-  - ポータル共通フッター（`app/_components/SiteFooter.tsx`）に `/login` への導線を常設する
-- 新しいfeatureで管理者限定の操作を追加する場合は、featureごとに認証を作らず、この共通の `admin.AuthMiddleware()` / `checkIsAdmin()` を再利用すること
+- 目的: 商用システム並みのアクセス管理をポートフォリオとして示す。ユーザーにロールを割り当て、ロールごとにリソース（feature・アクセス管理画面）への権限レベルを設定する。以前の `ADMIN_PASSWORD` による管理者ログイン（`internal/admin`、HMAC署名Cookie）はこの仕組みに置き換えて削除した。featureで特定の操作を限定したい場合は、featureごとに認証を作らず、このアクセス管理の権限（`middleware.Require` / フロントエンドのセッション）を使うこと
+- 実装場所: `server/internal/accesscontrol/`（feature非依存の共通処理だが、今後ユーザー・ロールの管理APIも載せるため、featureと同じ `controller` / `service` / `repository` / `dto` / `router` 構成にしている）
+  - `permission/`: リソースの一覧（`Resources`）と権限レベル（`none` < `read` < `write`、writeはreadを含む）の純粋な定義。リソースはNext.js側のfeature-slugと揃え、featureを追加したらここにも追加する。書き込み操作のないリソース（`shop-css`）は `MaxLevel` を `read` にする
+  - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
+- featureの権限チェック
+  - Go側（正）: 各featureの `router` で、書き込み系のルートだけをまとめたグループに `middleware.Authenticate(authSvc)` と `middleware.Require(<リソース>, permission.Write)` を付ける。`authSvc` は `cmd/api/main.go` で `accesscontrolrouter.SetupAuthRoutes` の戻り値を各featureの `SetupXxxRoutes` に渡す。現在対象にしているのは `simple-ledger`（取引の作成・更新・削除）と `form-builder`（フォーム・回答の作成・更新・削除）。読み取り系（`GET`）には付けていない（SSR時のサーバー間通信がCookieを持たないため。ゲストロールには全featureの `read` を付けている）
+  - `simple-cms`（カテゴリ・記事の作成・更新・削除）も同様に `write` 権限を要求する。`book-database` の書き込みは `CRON_SECRET` で保護した `/api/books/sync` のみ
+  - `simple-cms` もほかのfeatureと同様に、記事の投稿・編集・カテゴリ管理の画面は誰でも開いて操作を試せ、保存・削除のボタンだけを `write` 権限がない場合に押せなくする
+  - フロントエンド側（表示の切り替えのみ）: **`read` 権限は「画面の操作は試せるが、保存・削除はできない」として扱う**。作成・編集の画面やダイアログは誰でも開けるが、保存・削除・回答の送信ボタンだけを押せなくし、理由をツールチップで出す
+    - `app/demo-portal/_lib/useSession.ts` の `useWriteBlockedReason(<リソース>, <操作名>)` が、`write` 権限がなければ理由（未ログインなら「保存するにはログインが必要です」、ログイン済みなら「保存する権限がありません」）を返し、それを `components/ui` の `Button` の `blockedReason` に渡す。セッションの取得中・取得失敗時も押せない側に倒す
+    - `blockedReason` 付きの `Button` は `disabled` ではなく `aria-disabled` にする（`disabled` だとフォーカスもホバーのイベントも受け取れず、キーボード・スクリーンリーダー・ホバーで理由を伝えられないため）。クリックしても `onClick`・フォームの送信は行わない
+    - ツールチップ（`components/ui/Tooltip.tsx`）はホバー・フォーカス・タップで表示し、`aria-describedby` で読み上げにも対応する。表やモーダルのスクロール領域で切れないよう、`body` へのポータルに `fixed` で配置する。ツールチップの中にはリンクを置かない（ホバーが外れると消えるため）。ログインへの導線はヘッダーの「ログイン」に任せる
+  - 書き込み系の `fetch` には `credentials: "include"` を付けてセッションCookieを送る
+  - ヘッダーからログアウトしたときは `notifySessionChange()`（`portal:session-change` イベント）で、表示中のページの `useSession` も取得し直す
+- テーブル（`server/migrations/000005_create_portal_access_control_tables.*.sql`）
+  - `portal_users`（`password_hash`はbcrypt）/ `portal_roles` / `portal_user_roles`（多対多）/ `portal_role_permissions`（ロール×リソース→`read`/`write`、行がなければ`none`）/ `portal_sessions`
+  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-guest`（`viewer`ロール、パスワード `demo-pass`）を入れている。`demo-guest` のログイン情報はログイン画面に載せている公開情報
+  - **公開しないアカウント（サイト運営者の管理者アカウント等）はシードに入れない**。bcryptのハッシュであっても、リポジトリに置くと短いパスワードは総当たりで割り出されうるため。代わりに `server/cmd/createuser` で作成する
+- ユーザーの作成（`server/cmd/createuser`）
+  - `service.UserService.Create` でパスワードをbcryptでハッシュ化して `portal_users` に保存し、`-role` のロール（既定は `admin`）を割り当てる。パスワードは12文字以上・72バイト以内。ログインIDは英数字と `. _ -` の3〜50文字。`guest` ロールは割り当てられない
+  - パスワードはコマンドライン引数ではなく標準入力から読む（シェルの履歴・プロセス一覧に残さないため）。端末から実行すると入力を表示せずに確認つきで2回入力させる
+  ```bash
+  # ローカル
+  cd server
+  DATABASE_URL="mysql://app:app@tcp(127.0.0.1:3306)/my_portal" go run ./cmd/createuser -login <ログインID> -name <表示名> -role admin
+  # 本番（Lightsail Instance上）
+  docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm createuser -login <ログインID> -name <表示名> -role admin
+  ```
+- 権限の決まり方: ユーザーの権限は、割り当てられた全ロールとゲストロールの権限の和集合（リソースごとに最も強いもの）。未ログインの訪問者にはゲストロール（`code = 'guest'`）の権限を適用する。ゲストロールを常に含めるのは、ログインしたことで未ログインのときより権限が弱くなることがないようにするため
+- API（`/api/auth`）
+  ```
+  POST /login    ログインIDとパスワードでログインし、セッションCookie（portal_session）を発行する
+  POST /logout   セッションをDBから削除し、Cookieを消す
+  GET  /session  ログイン中のユーザー（未ログインならnull）と、全リソースの権限レベルを返す
+  ```
+- API（`/api/access-control`、アクセス管理画面用。閲覧には `access-control` の `read`、変更には `write` が必要）
+  ```
+  GET /roles                  リソースの一覧（設定できる上限つき）と、全ロールのリソースごとの権限
+  PUT /roles/:id/permissions  ロールの権限をまるごと置き換える（{"permissions": {"<リソース>": "none" | "read" | "write"}}、キーのないリソースはnone）
+  ```
+  - `admin` ロールの権限は変更できない（`editable: false`）。権限を外して誰もアクセス管理を操作できなくなることを防ぐため
+  - `guest` ロールには `access-control` の権限を付けられない（未ログインの訪問者全員に権限の変更を許してしまうため）
+  - 未知のリソース・不正な権限レベル・リソースの上限を超える権限（`shop-css` の `write` 等）は、丸めずに`400`にする（画面の表示と保存される内容を食い違わせないため）
+  - READ_ONLYの除外リストには入れていない（`READ_ONLY=true` の本番では管理者でも権限を変更できない）
+- フロントエンド
+  - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
+  - `/demo-portal/access-control`: アクセス管理画面。リソース（行）×ロール（列）の権限表で、`access-control` の `write` 権限があれば各セルの権限（なし・閲覧・編集）を変えて「変更を保存」で保存できる（変更したロールだけを`PUT`する）。`read` のみなら表を閲覧するだけ。選べる権限はGo側の検証と揃え（`_lib/permissions.ts` の `selectableLevels`）、`admin` ロールの列と、ゲストロールの「アクセス管理」は変更できない表示にする。デモポータルのヘッダーには、`access-control` の権限があるユーザーにだけ「アクセス管理」へのリンクを出す
+  - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
+  - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す
+- 設計判断
+  - **セッションはDBに保存する**（以前の `ADMIN_PASSWORD` 方式のようなHMAC署名Cookieのステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
+  - CookieはHttpOnly・SameSite=Lax（本番のReleaseModeではSecureも付ける）。SameSite=LaxによりほかのサイトからのPOSTにCookieが付かないため、CSRFトークンは持たない
+  - **ログインの失敗**: ログインIDが存在しない・パスワードが違う・ユーザーが無効化されている、はすべて同じ`401`にする（ログインIDの存在を推測させない）。存在しないログインIDでもbcryptの比較を1回行い、応答時間の差も出さない。5回連続で失敗するとそのアカウントを15分ロックし、ロック中は`429`を返す
+  - パスワードは72文字まで（bcryptは72バイトを超える部分を無視するため）
+  - ログイン済みの状態で別のアカウントにログインし直した場合、それまでのセッションはDBから削除する
+  - `/api/auth/login`・`/api/auth/logout` はセッションの行を書き込むが、デモデータは変更しないため、READ_ONLYの除外リストに入れている
 
 ## CI/CD（GitHub Actions）
 
@@ -146,7 +193,7 @@ server/
 - 目的: 各featureは基本的に「誰でも編集・削除できる公開デモ」（例: `simple-ledger`）として作る方針のため、本番でシードデータやデモデータをいたずらに書き換えられたくない場合に、書き込み系エンドポイントだけを丸ごと止められるようにしている
 - 挙動: `server/cmd/api/main.go` の `readOnlyMiddleware` がGinのグローバルミドルウェアとして登録されている。`READ_ONLY=true`（`.env.prod`）のとき、`GET`/`HEAD`/`OPTIONS`以外の全リクエスト（`POST`/`PUT`/`PATCH`/`DELETE`）を、除外リストに載っているルートを除いて`403`＋`{"error": "..."}`で拒否する。未設定・`false`のときは通常どおり書き込みを許可する
 - **除外ルール**: `cmd/api/main.go` の `readOnlyMiddleware(readOnly, "/api/books/sync")` の第2引数以降が除外パスのリスト。あるエンドポイントを除外してよいかどうかは以下で判断する
-  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/admin/login`・`/api/admin/logout`と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「管理者ログイン（ポートフォリオ共通）」の`admin.AuthMiddleware`付き）
+  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/auth/login`・`/api/auth/logout`（ログイン処理自体。セッションを書き込むがデモデータは変更しない）と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「アクセス管理（RBAC）」の `simple-cms` の `write` 権限で保護。サイト運営者が作成したアカウントだけが書き込める前提のため、ゲストロールには `simple-cms` の `write` を付けないこと）
   - ✅ 除外してよい（認可なし、DB/デモデータ非変更）: 認可のない公開エンドポイントでも、DB上のシードデータ・デモデータを一切変更せず、外部への副作用（メール送信等）のみを行うもの。例: `/api/contact`（`internal/contact`、問い合わせ内容をメール転送するだけでDBに書き込まない）。READ_ONLYの目的は「公開デモのシードデータ保護」であり、こうしたエンドポイントはその対象外になる
   - ❌ 除外してはいけない: フロントエンドの画面操作（ボタンクリック等）から到達する、認可のない**DB書き込みを伴う**公開エンドポイント。例: `simple-ledger`の取引作成・更新・削除
   - 新しいfeatureでcron専用・管理者専用の更新エンドポイントを追加した場合は、必ずそのエンドポイント自身にも認可（bearer tokenチェック等）を実装したうえで、`main.go`の除外リストに追記すること。DB/デモデータを変更する認可なしエンドポイントを除外リストに入れてはいけない
@@ -158,7 +205,7 @@ server/
 
 ## カスタムフォームビルダー（form-builder）
 
-- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。他の公開デモと同様、誰でも作成・編集・削除できる（`READ_ONLY=true`の本番では書き込みがすべて止まる。管理者限定にはしていない）
+- 目的: 項目を自由に組み合わせてフォームを作成し、集まった回答をデータベースとして一覧できるfeature。フォーム・回答の保存・削除（回答の投稿を含む）には、アクセス管理（RBAC）で `form-builder` の `write` 権限が必要。構築画面等の操作は `read` 権限でも試せる（後述「アクセス管理（RBAC）」の「featureの権限チェック」を参照。`READ_ONLY=true`の本番では権限にかかわらず書き込みがすべて止まる）
 - テーブル（`server/migrations/000004_create_form_builder_tables.*.sql`、シードデータとしてフォーム3件・回答17件を含む）
   - `form_builder_forms`: フォーム本体
   - `form_builder_form_fields`: 項目定義。`type`は`text` / `textarea` / `number` / `email` / `date` / `select` / `radio` / `checkbox`。`options`（JSON配列）は`select`/`radio`/`checkbox`の選択肢で、それ以外は`[]`

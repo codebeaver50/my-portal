@@ -12,4 +12,5 @@ export { Table, TableHeaderCell, TableRow, TableCell } from "./Table";
 export { Textarea } from "./Textarea";
 export { TechTag } from "./TechTag";
 export { ToastProvider, useToast } from "./Toast";
+export { Tooltip } from "./Tooltip";
 export { cn } from "./cn";

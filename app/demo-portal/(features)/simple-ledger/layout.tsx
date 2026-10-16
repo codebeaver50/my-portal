@@ -8,7 +8,7 @@ export default function SimpleLedgerLayout({ children }: LayoutProps<"/demo-port
       <PageContainer>
         <PageHeader
           title="複式簿記シンプル家計簿"
-          description="複式簿記の仕組みで取引を記録・分析するデモアプリです。閲覧中のデータは誰でも編集・削除できる共有の台帳です。"
+          description="複式簿記の仕組みで取引を記録・分析するデモアプリです。画面の操作は誰でも試せますが、保存・削除には編集権限のあるアカウントでのログインが必要です。"
         />
         <FeatureNav />
         {children}

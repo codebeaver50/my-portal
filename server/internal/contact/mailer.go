@@ -28,8 +28,7 @@ type smtpMailer struct {
 // NewSMTPMailer は環境変数からSMTP接続情報を読み込む。
 // CONTACT_SMTP_HOST / CONTACT_SMTP_PORT / CONTACT_SMTP_USERNAME /
 // CONTACT_SMTP_PASSWORD / CONTACT_FROM_EMAIL / CONTACT_TO_EMAIL のいずれかが
-// 未設定の場合、Send は常にエラーを返す（未設定＝問い合わせ機能が無効、という
-// admin.ADMIN_PASSWORD と同じ扱い）。
+// 未設定の場合、Send は常にエラーを返す（未設定＝問い合わせ機能が無効）。
 func NewSMTPMailer() Mailer {
 	return &smtpMailer{
 		host:     os.Getenv("CONTACT_SMTP_HOST"),
