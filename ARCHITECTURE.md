@@ -138,8 +138,18 @@ server/
   POST /logout   セッションをDBから削除し、Cookieを消す
   GET  /session  ログイン中のユーザー（未ログインならnull）と、全リソースの権限レベルを返す
   ```
+- API（`/api/access-control`、アクセス管理画面用。閲覧には `access-control` の `read`、変更には `write` が必要）
+  ```
+  GET /roles                  リソースの一覧（設定できる上限つき）と、全ロールのリソースごとの権限
+  PUT /roles/:id/permissions  ロールの権限をまるごと置き換える（{"permissions": {"<リソース>": "none" | "read" | "write"}}、キーのないリソースはnone）
+  ```
+  - `admin` ロールの権限は変更できない（`editable: false`）。権限を外して誰もアクセス管理を操作できなくなることを防ぐため
+  - `guest` ロールには `access-control` の権限を付けられない（未ログインの訪問者全員に権限の変更を許してしまうため）
+  - 未知のリソース・不正な権限レベル・リソースの上限を超える権限（`shop-css` の `write` 等）は、丸めずに`400`にする（画面の表示と保存される内容を食い違わせないため）
+  - READ_ONLYの除外リストには入れていない。`demo-admin` のパスワードはリポジトリのシードデータから分かるため、`READ_ONLY=true` の本番では権限を変更できない
 - フロントエンド
   - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
+  - `/demo-portal/access-control`: アクセス管理画面。リソース（行）×ロール（列）の権限表で、`access-control` の `write` 権限があれば各セルの権限（なし・閲覧・編集）を変えて「変更を保存」で保存できる（変更したロールだけを`PUT`する）。`read` のみなら表を閲覧するだけ。選べる権限はGo側の検証と揃え（`_lib/permissions.ts` の `selectableLevels`）、`admin` ロールの列と、ゲストロールの「アクセス管理」は変更できない表示にする。デモポータルのヘッダーには、`access-control` の権限があるユーザーにだけ「アクセス管理」へのリンクを出す
   - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
   - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す
 - 設計判断

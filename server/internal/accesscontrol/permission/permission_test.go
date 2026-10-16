@@ -11,6 +11,19 @@ func TestParseLevel(t *testing.T) {
 	}
 }
 
+func TestLookupLevel(t *testing.T) {
+	for value, want := range map[string]Level{"none": None, "read": Read, "write": Write} {
+		if got, ok := LookupLevel(value); !ok || got != want {
+			t.Errorf("LookupLevel(%q) = %v, %v, want %v, true", value, got, ok, want)
+		}
+	}
+	for _, value := range []string{"", "WRITE", "admin"} {
+		if _, ok := LookupLevel(value); ok {
+			t.Errorf("LookupLevel(%q) should not be ok", value)
+		}
+	}
+}
+
 func TestLevel_Allows(t *testing.T) {
 	if !Write.Allows(Read) || !Write.Allows(Write) || !Read.Allows(Read) {
 		t.Error("stronger or equal level should allow")

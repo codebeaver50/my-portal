@@ -8,6 +8,7 @@ import { fetchSession, logout } from "../_lib/auth";
 import type { Session } from "../_lib/auth";
 
 const loginPath = "/demo-portal/login";
+const accessControlPath = "/demo-portal/access-control";
 
 // デモポータルのヘッダーに出す、ログイン中のユーザーとロール（未ログインならゲスト）とログイン/ログアウトの導線。
 export function AccountStatus() {
@@ -60,6 +61,11 @@ export function AccountStatus() {
 
   return (
     <div className="flex items-center gap-3">
+      {session.permissions["access-control"] !== "none" && pathname !== accessControlPath ? (
+        <Link href={accessControlPath} className={linkClassName}>
+          アクセス管理
+        </Link>
+      ) : null}
       <div className="flex min-w-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
         <span className="truncate text-sm font-semibold">{session.user.displayName}</span>
         <span className="flex gap-1">

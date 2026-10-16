@@ -70,7 +70,8 @@ func main() {
 
 	engine.GET("/health", handleHealth)
 	apiGroup := engine.Group("/api")
-	accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
+	authSvc := accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
+	accesscontrolrouter.SetupAccessControlRoutes(apiGroup, conn, authSvc)
 	admin.RegisterRoutes(apiGroup)
 	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)

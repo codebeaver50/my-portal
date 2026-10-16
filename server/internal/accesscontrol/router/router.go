@@ -7,6 +7,7 @@ import (
 
 	"github.com/codebeaver50/my-portal/server/internal/accesscontrol/controller"
 	"github.com/codebeaver50/my-portal/server/internal/accesscontrol/middleware"
+	"github.com/codebeaver50/my-portal/server/internal/accesscontrol/permission"
 	"github.com/codebeaver50/my-portal/server/internal/accesscontrol/repository"
 	"github.com/codebeaver50/my-portal/server/internal/accesscontrol/service"
 )
@@ -29,4 +30,18 @@ func SetupAuthRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) service.AuthService
 	}
 
 	return authSvc
+}
+
+// SetupAccessControlRoutes はアクセス管理画面のAPI（/api/access-control）を apiGroup 配下に登録する。
+// 閲覧には access-control の read、変更には write の権限が必要。authSvc は SetupAuthRoutes の戻り値を渡す。
+func SetupAccessControlRoutes(apiGroup *gin.RouterGroup, db *gorm.DB, authSvc service.AuthService) {
+	roleRepo := repository.NewRoleRepository(db)
+	roleSvc := service.NewRoleService(db, roleRepo)
+	roleCtrl := controller.NewRoleController(roleSvc)
+
+	group := apiGroup.Group("/access-control", middleware.Authenticate(authSvc))
+	{
+		group.GET("/roles", middleware.Require(permission.AccessControl, permission.Read), roleCtrl.List())
+		group.PUT("/roles/:id/permissions", middleware.Require(permission.AccessControl, permission.Write), roleCtrl.UpdatePermissions())
+	}
 }
