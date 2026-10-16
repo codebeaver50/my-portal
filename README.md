@@ -15,6 +15,14 @@ macOS（Apple Silicon）と [Homebrew](https://brew.sh/) を前提にする。�
 | Mac に1つあればよいもの（proto・Docker Desktop） | `Brewfile` | `brew bundle` |
 | バージョンを揃えるもの（Node.js・Go・golangci-lint） | `.nvmrc`（Node.js）・`.prototools`（Go・golangci-lint） | `proto install` |
 
+以下の手順 1〜3 は、`./setup.sh` で対話的に進めることもできる。各手順の前に確認し、済んでいる手順は飛ばす（何度実行してもよい。`.env` 等の既存のファイルは上書きしない）。`./setup.sh -y` で確認せずに進める。
+
+```bash
+git clone https://github.com/codebeaver50/my-portal.git
+cd my-portal
+./setup.sh
+```
+
 ### 1. ツールを入れる
 
 ```bash
