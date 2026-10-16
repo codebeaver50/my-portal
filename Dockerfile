@@ -1,12 +1,12 @@
 # Next.js (app/, components/) 用の本番イメージ。standalone出力を使い、
 # ランタイムに必要なファイルだけをコピーする（node_modules全体は含めない）。
 
-FROM node:20-slim AS deps
+FROM node:24-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM node:20-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -15,7 +15,7 @@ ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 RUN npm run build
 
-FROM node:20-slim AS run
+FROM node:24-slim AS run
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
