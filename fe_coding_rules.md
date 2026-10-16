@@ -53,6 +53,7 @@
   const onError = (error: any) => showToast(error.message, "error");
   ```
 - `as` による型アサーション・非null アサーション（`!`）は原則使わない。使う場合は、なぜ安全なのかをコメントに書く
+  - 例外: 選択肢を同じユニオン型の値だけで作っている `<select>` / ラジオボタンの値を、そのユニオン型に戻す場合はコメントなしで `as` を使ってよい（`e.target.value as EntryType` 等）
 - 値ごとの対応表は `Record<ユニオン型, 値>` にして、値の追加時に対応漏れを型エラーで検出できるようにする
   ```ts
   const ACCOUNT_TYPE_LABEL: Record<ChartOfAccount["type"], string> = { asset: "資産", /* ... */ };
@@ -177,6 +178,8 @@ const { data: accounts = [] } = useChartOfAccounts();
 - IntersectionObserver 等のブラウザAPIの結果に応じて処理する（無限スクロールで `fetchNextPage` を呼ぶ等）
 - フォーカス・スクロール位置のような、DOM を直接操作する処理
 - サーバーとクライアントで値が変わるもの（現在時刻等）を、ハイドレーションの不一致を避けるためにマウント後に設定する
+- TanStack Query の Provider の外にあるコンポーネントでのデータ取得（禁止パターン 6 の例外）。`ignore` フラグを必ず付ける
+  - 現在は、ルートのlayoutのヘッダーにある `app/demo-portal/_components/AccountStatus.tsx` と、そこから使う `app/demo-portal/_lib/useSession.ts` だけが該当する。Provider を demo-portal 全体に置く構成に変えたら、この例外はなくす
 
 #### useEffect を書くときのルール
 
@@ -243,12 +246,14 @@ const { data: accounts = [] } = useChartOfAccounts();
   ```
 - ページ内の配置（`flex` / `grid` / `gap` / 余白等）は、Tailwind のクラスを直接書いてよい
 - 色は `bg-foreground` / `text-muted-foreground` / `bg-danger` のようなテーマのトークンを使い、`bg-gray-500` や `#xxxxxx` を直書きしない（ダークモード等でテーマを変えたときに追従させるため）
+  - 例外: グラフ（Recharts 等の SVG）の配色のように、ライブラリに色の値を直接渡す必要があるものは、feature の `_lib` の配色定義ファイル（`simple-ledger/_lib/chartColors.ts` 等）にまとめる場合に限り直書きしてよい。ライトモード・ダークモードの両方の配色を定義する
 - クラス名を条件で切り替える・外から上書きできるようにする場合は `cn()`（`clsx` + `tailwind-merge`）を使い、文字列の連結にしない
 - `components/ui` に部品を追加・変更するときは、ほかの feature で使われている箇所への影響を確認する
 
 ## アクセシビリティ
 
 - クリックできる要素は `<button>` / `<a>`（`Link`）にする。`<div onClick>` にしない
+  - 例外: 同じ操作をする `<button>` が別にあり、キーボード・スクリーンリーダーではそちらを使える場合に限り、マウス用の補助としてカード全体等に `onClick` を付けてよい（form-builder の `CanvasField` で、カード全体のクリックと「設定」ボタンが同じ操作になっている等）
 - 入力欄には `<label>` を関連付ける。アイコンだけのボタンには `aria-label` を付ける
 - 権限がなく押せないボタンは `disabled` ではなく、`Button` の `blockedReason` を使う（`ARCHITECTURE.md` の「アクセス管理（RBAC）」を参照）。理由をフォーカス・読み上げでも伝えるため
 - モーダルは `components/ui` の `Modal` を使う（`role="dialog"`・Escキーで閉じる処理が組み込まれている）
