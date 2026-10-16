@@ -16,7 +16,8 @@ export const techStackSections: TechStackSection[] = [
     items: [
       "Next.js 16 (App Router)",
       "React 19",
-      "TypeScript",
+      "TypeScript 5",
+      "Node.js 24",
       "Tailwind CSS v4",
       "TanStack Query",
       "Zod",
