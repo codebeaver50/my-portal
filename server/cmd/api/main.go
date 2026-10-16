@@ -75,9 +75,9 @@ func main() {
 	admin.RegisterRoutes(apiGroup)
 	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
-	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn)
+	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn, authSvc)
 	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn)
-	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn)
+	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn, authSvc)
 
 	port := os.Getenv("PORT")
 	if port == "" {
