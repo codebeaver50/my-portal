@@ -31,7 +31,8 @@ golangci-lint fmt ./...   # gofmt / goimports で整形
 | 外部への HTTP リクエストに context を渡す | `noctx`（テストを除く） |
 | `resp.Body` を閉じる | `bodyclose` |
 | `panic` / `http.DefaultClient` を使わない。`internal/` で `os.Getenv` しない | `forbidigo` |
-| feature から別の feature を import しない | `depguard`（featureを追加したらルールを追記する） |
+
+feature から別の feature を import していないことは、golangci-lint ではなく `go test` で確かめている（`server/internal/features/independence_test.go`）。`internal/features/` 配下のディレクトリを読んで検査するため、featureを追加しても設定は不要。
 
 `//nolint` で止める場合は、`//nolint:<linter> // 理由` のように対象のlinterと理由を書く。
 
