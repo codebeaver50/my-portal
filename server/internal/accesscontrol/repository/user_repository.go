@@ -20,6 +20,16 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+// WithTx は指定のトランザクションに紐づく UserRepository を返す。
+func (r *UserRepository) WithTx(tx *gorm.DB) *UserRepository {
+	return &UserRepository{db: tx}
+}
+
+// Create はユーザーを挿入する。挿入後、user.ID に採番されたIDが入る。
+func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
+}
+
 // GetByID はIDでユーザーを返す。存在しない場合は nil を返す。
 func (r *UserRepository) GetByID(ctx context.Context, id uint) (*models.User, error) {
 	var user models.User

@@ -27,6 +27,7 @@ server/
   go.mod
   cmd/api/main.go             # エントリポイント（Goの標準的なcmd/レイアウト）
   cmd/migrate/main.go         # DBマイグレーション適用コマンド
+  cmd/createuser/main.go      # アクセス管理（RBAC）のユーザー作成コマンド（管理者アカウント等）
   migrations/                 # SQLマイグレーションファイル（golang-migrate形式）
   internal/
     db/                       # feature非依存の共通処理（GORMのDB接続等）
@@ -95,9 +96,9 @@ server/
 ## 本番デプロイ（AWS Lightsail）
 
 - 対象: Lightsail **Instance**（VPS）1台。Lightsail Container Serviceは使わない（MySQLをコンテナで動かし永続化したいため、ステートレス前提のマネージドコンテナサービスと相性が悪い）
-- 構成ファイル: リポジトリルートの `docker-compose.prod.yml`（ローカル開発用の`docker-compose.yml`とは別物）。`web`（Next.js）・`api`（Go）・`mysql`・`caddy`・`migrate`（一時実行専用）の5サービス
+- 構成ファイル: リポジトリルートの `docker-compose.prod.yml`（ローカル開発用の`docker-compose.yml`とは別物）。`web`（Next.js）・`api`（Go）・`mysql`・`caddy`・`migrate`（一時実行専用）・`createuser`（一時実行専用、`profiles: ["tools"]`で`up`の対象外）の6サービス
   - `Dockerfile`（ルート、Next.js用）: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build。`NEXT_PUBLIC_API_BASE_URL` はビルド時にJSへ埋め込まれるため、`docker compose build` 時にbuild argとして渡す
-  - `server/Dockerfile`: `api`・`migrate` 両方のバイナリを1つのイメージに含め、`docker-compose.prod.yml`側でどちらを起動するかを切り替える
+  - `server/Dockerfile`: `api`・`migrate`・`createuser` のバイナリを1つのイメージに含め、`docker-compose.prod.yml`側でどれを起動するかを切り替える
   - `Caddyfile`: 単一の公開ドメインで、`/api/*`・`/health` を`api`コンテナへ、それ以外を`web`コンテナへリバースプロキシする。Let's Encrypt証明書の取得・更新もCaddyが自動で行う
 - 環境変数は `.env.prod`（git管理しない、Lightsail Instance上にのみ置く）にまとめ、`docker compose --env-file .env.prod -f docker-compose.prod.yml ...` で読み込む（`DOMAIN` / `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` / `CRON_SECRET` / `READ_ONLY`）。`READ_ONLY`の詳細は後述の「READ_ONLYモード」を参照
 - マイグレーションは常時起動サービスにせず、`docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm migrate up` で都度実行する
@@ -130,7 +131,18 @@ server/
   - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
 - テーブル（`server/migrations/000005_create_portal_access_control_tables.*.sql`）
   - `portal_users`（`password_hash`はbcrypt）/ `portal_roles` / `portal_user_roles`（多対多）/ `portal_role_permissions`（ロール×リソース→`read`/`write`、行がなければ`none`）/ `portal_sessions`
-  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-admin` / `demo-editor` / `demo-guest`（`viewer`ロール、パスワードはいずれも `demo-pass`）を入れている。ログイン画面に載せるのは `demo-guest` のログイン情報のみ
+  - シードデータとして組み込みロール（`admin` / `editor` / `viewer` / `guest`）と、訪問者が試せるデモ用アカウント `demo-guest`（`viewer`ロール、パスワード `demo-pass`）を入れている。`demo-guest` のログイン情報はログイン画面に載せている公開情報
+  - **公開しないアカウント（サイト運営者の管理者アカウント等）はシードに入れない**。bcryptのハッシュであっても、リポジトリに置くと短いパスワードは総当たりで割り出されうるため。代わりに `server/cmd/createuser` で作成する
+- ユーザーの作成（`server/cmd/createuser`）
+  - `service.UserService.Create` でパスワードをbcryptでハッシュ化して `portal_users` に保存し、`-role` のロール（既定は `admin`）を割り当てる。パスワードは12文字以上・72バイト以内。ログインIDは英数字と `. _ -` の3〜50文字。`guest` ロールは割り当てられない
+  - パスワードはコマンドライン引数ではなく標準入力から読む（シェルの履歴・プロセス一覧に残さないため）。端末から実行すると入力を表示せずに確認つきで2回入力させる
+  ```bash
+  # ローカル
+  cd server
+  DATABASE_URL="mysql://app:app@tcp(127.0.0.1:3306)/my_portal" go run ./cmd/createuser -login <ログインID> -name <表示名> -role admin
+  # 本番（Lightsail Instance上）
+  docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm createuser -login <ログインID> -name <表示名> -role admin
+  ```
 - 権限の決まり方: ユーザーの権限は、割り当てられた全ロールとゲストロールの権限の和集合（リソースごとに最も強いもの）。未ログインの訪問者にはゲストロール（`code = 'guest'`）の権限を適用する。ゲストロールを常に含めるのは、ログインしたことで未ログインのときより権限が弱くなることがないようにするため
 - API（`/api/auth`）
   ```
@@ -146,7 +158,7 @@ server/
   - `admin` ロールの権限は変更できない（`editable: false`）。権限を外して誰もアクセス管理を操作できなくなることを防ぐため
   - `guest` ロールには `access-control` の権限を付けられない（未ログインの訪問者全員に権限の変更を許してしまうため）
   - 未知のリソース・不正な権限レベル・リソースの上限を超える権限（`shop-css` の `write` 等）は、丸めずに`400`にする（画面の表示と保存される内容を食い違わせないため）
-  - READ_ONLYの除外リストには入れていない。`demo-admin` のパスワードはリポジトリのシードデータから分かるため、`READ_ONLY=true` の本番では権限を変更できない
+  - READ_ONLYの除外リストには入れていない（`READ_ONLY=true` の本番では管理者でも権限を変更できない）
 - フロントエンド
   - `/demo-portal/login`: ログイン画面。`?redirect=/demo-portal/<feature-slug>` でログイン後の戻り先を指定できる（"/" 始まりの相対パスのみ許可）。フォームの下にデモ用アカウントのログインIDとパスワードを載せる
   - `/demo-portal/access-control`: アクセス管理画面。リソース（行）×ロール（列）の権限表で、`access-control` の `write` 権限があれば各セルの権限（なし・閲覧・編集）を変えて「変更を保存」で保存できる（変更したロールだけを`PUT`する）。`read` のみなら表を閲覧するだけ。選べる権限はGo側の検証と揃え（`_lib/permissions.ts` の `selectableLevels`）、`admin` ロールの列と、ゲストロールの「アクセス管理」は変更できない表示にする。デモポータルのヘッダーには、`access-control` の権限があるユーザーにだけ「アクセス管理」へのリンクを出す

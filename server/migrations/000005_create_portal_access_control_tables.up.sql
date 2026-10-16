@@ -81,7 +81,10 @@ CREATE TABLE portal_sessions (
         ON DELETE CASCADE ON UPDATE CASCADE
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- シードデータ: 組み込みロールと、訪問者が試せるデモ用アカウント（パスワードはいずれも demo-pass）
+-- シードデータ: 組み込みロールと、訪問者が試せるデモ用アカウント demo-guest（閲覧者）。
+-- demo-guest のパスワード（demo-pass）はログイン画面に載せている公開情報なので、ハッシュをここに置いてよい。
+-- 管理者など公開しないアカウントはシードに入れず、server/cmd/createuser で作成する
+-- （ハッシュであっても、リポジトリに置くとパスワードを総当たりで割り出されうるため）。
 INSERT INTO portal_roles (id, code, name, description, is_system) VALUES
     (1, 'admin', '管理者', 'すべてのfeatureの読み書きと、ユーザー・ロールの管理ができる', TRUE),
     (2, 'editor', '編集者', 'すべてのfeatureの読み書きができる', FALSE),
@@ -113,11 +116,7 @@ INSERT INTO portal_role_permissions (role_id, resource, level) VALUES
     (4, 'shop-css', 'read');
 
 INSERT INTO portal_users (id, login_id, display_name, password_hash) VALUES
-    (1, 'demo-admin', 'デモ管理者', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O'),
-    (2, 'demo-editor', 'デモ編集者', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O'),
-    (3, 'demo-guest', 'デモゲスト', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O');
+    (1, 'demo-guest', 'デモゲスト', '$2a$12$K1MZqu9dWN4XtOlkkzQN/ucsAWqPU6zH8LCzGOBS7e5kT5gdbQM.O');
 
 INSERT INTO portal_user_roles (user_id, role_id) VALUES
-    (1, 1),
-    (2, 2),
-    (3, 3);
+    (1, 3);
