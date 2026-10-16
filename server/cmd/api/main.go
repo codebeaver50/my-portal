@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	accesscontrolrouter "github.com/codebeaver50/my-portal/server/internal/accesscontrol/router"
-	"github.com/codebeaver50/my-portal/server/internal/admin"
 	"github.com/codebeaver50/my-portal/server/internal/contact"
 	"github.com/codebeaver50/my-portal/server/internal/db"
 	bookdatabaserouter "github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/router"
@@ -59,8 +58,6 @@ func main() {
 	// 当たらず対象外にする。
 	engine.Use(readOnlyMiddleware(readOnly,
 		"/api/books/sync",
-		"/api/admin/login",
-		"/api/admin/logout",
 		"/api/auth/login",
 		"/api/auth/logout",
 		"/api/simple-cms/categories",
@@ -74,7 +71,6 @@ func main() {
 	apiGroup := engine.Group("/api")
 	authSvc := accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
 	accesscontrolrouter.SetupAccessControlRoutes(apiGroup, conn, authSvc)
-	admin.RegisterRoutes(apiGroup)
 	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn, authSvc)
