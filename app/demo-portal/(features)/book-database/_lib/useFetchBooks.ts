@@ -3,13 +3,13 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useInView } from "react-intersection-observer";
-import { fetchBookRows } from "../_lib/api";
-import type { BookRow } from "../_lib/types";
+import { fetchBookRows } from "./api";
+import type { BookRow } from "./types";
 
 export function useFetchBooks(initialBooks: BookRow[], initialHasMore: boolean) {
   const { ref: sentinelRef, inView } = useInView();
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteQuery({
-    queryKey: ["books"],
+    queryKey: ["book-database", "books"],
     queryFn: ({ pageParam }) => fetchBookRows(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) =>
@@ -20,6 +20,7 @@ export function useFetchBooks(initialBooks: BookRow[], initialHasMore: boolean) 
     },
   });
 
+  // 一覧の末尾の要素が画面に入ったこと（IntersectionObserver）に応じて、次のページを取得する。
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();

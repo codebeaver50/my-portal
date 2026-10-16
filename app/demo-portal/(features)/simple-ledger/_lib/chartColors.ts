@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 // dataviz skillの検証済みデフォルト配色（8色、CVD安全な固定順）。
 // カテゴリ別グラフ（勘定科目名など、系列数が可変のもの）に使う。
@@ -37,21 +37,21 @@ export function useTrendColors() {
   return useIsDarkMode() ? SEMANTIC_TREND_COLORS_DARK : SEMANTIC_TREND_COLORS_LIGHT;
 }
 
-function prefersDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+const DARK_MODE_QUERY = "(prefers-color-scheme: dark)";
+
+function subscribeDarkMode(onChange: () => void) {
+  const query = window.matchMedia(DARK_MODE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
 }
 
+// OSのダークモード設定（ブラウザの状態）を読む。サーバーでは分からないため、サーバー側の描画とハイドレーションではライトモードとして扱う。
 export function useIsDarkMode(): boolean {
-  const [isDark, setIsDark] = useState(prefersDark);
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = (event: MediaQueryListEvent) => setIsDark(event.matches);
-    query.addEventListener("change", listener);
-    return () => query.removeEventListener("change", listener);
-  }, []);
-
-  return isDark;
+  return useSyncExternalStore(
+    subscribeDarkMode,
+    () => window.matchMedia(DARK_MODE_QUERY).matches,
+    () => false,
+  );
 }
 
 export function useCategoricalPalette(): string[] {

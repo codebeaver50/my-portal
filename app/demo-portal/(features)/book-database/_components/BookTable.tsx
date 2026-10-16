@@ -4,7 +4,7 @@ import { Table, TableCell, TableHeaderCell, TableRow } from "@/components/ui";
 import { getApiBaseUrl } from "../_lib/api";
 import type { BookRow } from "../_lib/types";
 import { NoImage } from "./NoImage";
-import { useFetchBooks } from "./useFetchBooks";
+import { useFetchBooks } from "../_lib/useFetchBooks";
 
 type BookTableProps = {
   initialBooks: BookRow[];
