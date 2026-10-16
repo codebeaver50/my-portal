@@ -95,7 +95,7 @@ func TestTransactionController_Create(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid body returns 400", func(t *testing.T) {
+	t.Run("invalid body returns 400 without the validator message", func(t *testing.T) {
 		svc := &fakeTransactionService{}
 		r := gin.New()
 		r.POST("/transactions", NewTransactionController(svc).Create())
@@ -105,6 +105,15 @@ func TestTransactionController_Create(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("status = %d, want 400", w.Code)
+		}
+		var body struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatalf("failed to unmarshal body: %v", err)
+		}
+		if body.Error != "入力内容を確認してください" {
+			t.Errorf("error = %q, want 入力内容を確認してください", body.Error)
 		}
 	})
 

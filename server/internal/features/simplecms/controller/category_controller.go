@@ -49,7 +49,7 @@ func (ctrl *categoryController) Create() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req dto.CategoryRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 
@@ -77,7 +77,7 @@ func (ctrl *categoryController) Update() gin.HandlerFunc {
 
 		var req dto.CategoryRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 
