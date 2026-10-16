@@ -34,12 +34,13 @@ export function AccountStatus() {
     setIsPending(true);
     try {
       await logout();
-      setSession(await fetchSession());
+      // 遷移が終わるまでのあいだも、表示中のページの書き込みボタン等をゲストの状態にする
       notifySessionChange();
+      // ログアウト後はログイン画面へ。ログインし直したら元のページへ戻れるよう redirect を付ける
+      // （ヘッダーのログイン状態は pathname の変化で取得し直される）
+      router.push(pathname === loginPath ? loginPath : `${loginPath}?redirect=${encodeURIComponent(pathname)}`);
     } finally {
       setIsPending(false);
-      // 各featureのServer Componentがログイン状態を再判定できるよう、現在のルートのキャッシュを破棄する。
-      router.refresh();
     }
   }
 
