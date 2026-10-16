@@ -1,17 +1,8 @@
 # Coding Rules
 
-## 命名規則
-
-<!-- ファイル名、コンポーネント名、変数名などの規則 -->
-
-## コンポーネント設計方針
-
-<!-- Server/Client Componentの使い分け、ディレクトリ配置など -->
+- フロントエンド（React / TypeScript / Next.js）: @fe_coding_rules.md
+- Go API: golang_coding_rules.md（作成予定）
 
 ## Lint / Format
 
 - ESLint: `npm run lint`
-
-## その他の規約
-
-<!-- コミットメッセージ、テスト方針など -->

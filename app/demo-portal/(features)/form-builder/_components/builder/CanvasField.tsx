@@ -61,6 +61,7 @@ export function CanvasField({
   });
   const { buttonProps } = useButton({ ...dragButtonProps, "aria-label": `「${label}」を移動` }, handleRef);
 
+  // 項目の追加・移動・設定の保存のあと、その項目の移動ハンドルへフォーカスを移す（DOMの操作）。
   useEffect(() => {
     if (!shouldFocus) return;
     handleRef.current?.focus();

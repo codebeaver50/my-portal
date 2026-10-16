@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Card, Select, Table, TableCell, TableHeaderCell, TableRow, cn } from "@/components/ui";
-import { fetchSession } from "../../_lib/auth";
 import type { PermissionLevel } from "../../_lib/auth";
-import { ApiError, fetchRoles, updateRolePermissions } from "../_lib/api";
+import { useSession } from "../../_lib/useSession";
+import { ApiError } from "../_lib/api";
 import type { Role, RolesResponse } from "../_lib/api";
 import { isSamePermissions, levelLabels, resourceLabel, selectableLevels } from "../_lib/permissions";
+import { useRoles, useUpdateRolePermissions } from "../_lib/useRoles";
 
 type Drafts = Record<number, Record<string, PermissionLevel>>;
-
-type LoadState =
-  | { status: "loading" }
-  | { status: "error"; error: ApiError | Error }
-  | { status: "loaded"; data: RolesResponse; canWrite: boolean };
 
 function toDrafts(roles: Role[]): Drafts {
   return Object.fromEntries(roles.map((role) => [role.id, { ...role.permissions }]));
@@ -23,35 +19,32 @@ function toDrafts(roles: Role[]): Drafts {
 // ロール×リソースの権限表。access-control の write 権限があれば、各セルの権限を変えて保存できる。
 // 変更したロールだけをロールごとに PUT /api/access-control/roles/:id/permissions で保存する。
 export function RolePermissionsEditor() {
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [drafts, setDrafts] = useState<Drafts>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ variant: "success" | "error"; text: string } | null>(null);
+  const { data, error } = useRoles();
+  const session = useSession();
 
-  useEffect(() => {
-    let ignore = false;
-    Promise.all([fetchRoles(), fetchSession()])
-      .then(([data, session]) => {
-        if (ignore) return;
-        setState({ status: "loaded", data, canWrite: session?.permissions["access-control"] === "write" });
-        setDrafts(toDrafts(data.roles));
-      })
-      .catch((error: Error) => {
-        if (!ignore) setState({ status: "error", error });
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  if (state.status === "loading") {
+  if (error) {
+    return <LoadError error={error} />;
+  }
+  // 権限の確認が終わる前に表を出すと、編集できる表示に途中で切り替わるため、両方そろうまで待つ
+  if (!data || session === undefined) {
     return <p className="text-sm text-muted-foreground">読み込み中...</p>;
   }
-  if (state.status === "error") {
-    return <LoadError error={state.error} />;
-  }
 
-  const { data, canWrite } = state;
+  return <RolePermissionsTable data={data} canWrite={session?.permissions["access-control"] === "write"} />;
+}
+
+type RolePermissionsTableProps = {
+  data: RolesResponse;
+  canWrite: boolean;
+};
+
+// drafts の初期値を取得済みのロールから作るため、取得が終わってから描画するコンポーネントに分けている
+function RolePermissionsTable({ data, canWrite }: RolePermissionsTableProps) {
+  const [drafts, setDrafts] = useState<Drafts>(() => toDrafts(data.roles));
+  const [message, setMessage] = useState<{ variant: "success" | "error"; text: string } | null>(null);
+  const updateMutation = useUpdateRolePermissions();
+  const isSaving = updateMutation.isPending;
+
   const changedRoles = data.roles.filter((role) => !isSamePermissions(drafts[role.id] ?? {}, role.permissions));
 
   function handleChange(roleId: number, resource: string, level: PermissionLevel) {
@@ -64,23 +57,15 @@ export function RolePermissionsEditor() {
     setDrafts(toDrafts(data.roles));
   }
 
-  async function handleSave() {
-    setIsSaving(true);
+  function handleSave() {
     setMessage(null);
-    let roles = data.roles;
-    try {
-      // ロールごとに保存し、途中で失敗した場合も保存できたロールは表に反映する
-      for (const role of changedRoles) {
-        const updated = await updateRolePermissions(role.id, drafts[role.id]);
-        roles = roles.map((current) => (current.id === updated.id ? updated : current));
-      }
-      setMessage({ variant: "success", text: "権限を保存しました" });
-    } catch (error) {
-      setMessage({ variant: "error", text: error instanceof Error ? error.message : "権限の保存に失敗しました" });
-    } finally {
-      setState({ status: "loaded", data: { ...data, roles }, canWrite });
-      setIsSaving(false);
-    }
+    updateMutation.mutate(
+      changedRoles.map((role) => ({ roleId: role.id, permissions: drafts[role.id] })),
+      {
+        onSuccess: () => setMessage({ variant: "success", text: "権限を保存しました" }),
+        onError: (error) => setMessage({ variant: "error", text: error.message || "権限の保存に失敗しました" }),
+      },
+    );
   }
 
   return (
