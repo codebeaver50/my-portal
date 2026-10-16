@@ -8,11 +8,12 @@
 
 ## 開発環境のセットアップ
 
-macOS（Apple Silicon）と [Homebrew](https://brew.sh/) を前提にする。ツールは次の2つに分けて管理している。
+macOS（Apple Silicon）と [Homebrew](https://brew.sh/) を前提にする。ツールは次のように分けて管理している。
 
 | 対象 | 管理するファイル | 入れ方 |
 |---|---|---|
-| Mac に1つあればよいもの（proto・Docker Desktop） | `Brewfile` | `brew bundle` |
+| Mac に1つあればよいもの（proto） | `Brewfile` | `brew bundle` |
+| コンテナの実行環境（ローカルの MySQL 用） | なし（Docker Desktop と Rancher Desktop のどちらでもよい） | 各自で入れる |
 | バージョンを揃えるもの（Node.js・Go・golangci-lint） | `.nvmrc`（Node.js）・`.prototools`（Go・golangci-lint） | `proto install` |
 
 以下の手順 1〜3 は、`./setup.sh` で対話的に進めることもできる。各手順の前に確認し、済んでいる手順は飛ばす（何度実行してもよい。`.env` 等の既存のファイルは上書きしない）。`./setup.sh -y` で確認せずに進める。
@@ -25,11 +26,13 @@ cd my-portal
 
 ### 1. ツールを入れる
 
+コンテナの実行環境として、[Docker Desktop](https://www.docker.com/products/docker-desktop/) か [Rancher Desktop](https://rancherdesktop.io/) を入れておく（`brew install --cask docker-desktop` / `brew install --cask rancher-desktop`）。Rancher Desktop の場合は、コンテナエンジンに「dockerd (moby)」を選ぶ（`docker` コマンドを使うため）。
+
 ```bash
 git clone https://github.com/codebeaver50/my-portal.git
 cd my-portal
 
-brew bundle      # proto と Docker Desktop
+brew bundle      # proto
 proto setup      # 初回のみ。シェルの設定（PATH 等）を追加する。終わったらターミナルを開き直す
 proto install    # .nvmrc の Node.js と、.prototools の Go・golangci-lint
 npm ci
@@ -48,7 +51,7 @@ cp server/.env.example server/.env       # Go API 用（ローカルでは値を
 
 ### 3. DB を起動してマイグレーションを適用する
 
-Docker Desktop を起動してから実行する。
+Docker Desktop か Rancher Desktop を起動してから実行する。
 
 ```bash
 docker compose up -d                     # MySQL と mailpit（問い合わせメールの確認用）

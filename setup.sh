@@ -53,11 +53,11 @@ if ! command -v brew >/dev/null 2>&1; then
 fi
 ok "macOS / Homebrew（$(brew --prefix)）"
 
-# 1. proto・Docker Desktop -------------------------------------------------
+# 1. proto・コンテナの実行環境 -----------------------------------------------
 
-step "proto と Docker Desktop（Brewfile）"
-# brew bundle だと、Homebrew 以外の方法で入れた proto・Docker Desktop も「ない」と判断して
-# 二重に入れようとするため、コマンド・アプリがあるかで判断する
+step "proto（Brewfile）"
+# brew bundle だと、Homebrew 以外の方法（公式のインストールスクリプト）で入れた proto も
+# 「ない」と判断して二重に入れようとするため、コマンドがあるかで判断する
 if command -v proto >/dev/null 2>&1 || [ -x "$HOME/.proto/bin/proto" ]; then
   ok "proto は入っています"
 elif confirm "proto を Homebrew で入れますか？"; then
@@ -66,12 +66,34 @@ else
   fail "proto がないと続けられません"
 fi
 
-if [ -d /Applications/Docker.app ]; then
-  ok "Docker Desktop は入っています"
-elif confirm "Docker Desktop を Homebrew で入れますか？"; then
-  brew install --cask docker-desktop
+step "コンテナの実行環境（Docker Desktop / Rancher Desktop）"
+# Rancher Desktop の docker コマンドは ~/.rd/bin にあり、PATH への追加は zsh の設定で
+# 行われるため、bash で動くこのスクリプトからは見えないことがある
+if ! command -v docker >/dev/null 2>&1 && [ -x "$HOME/.rd/bin/docker" ]; then
+  export PATH="$HOME/.rd/bin:$PATH"
+fi
+if command -v docker >/dev/null 2>&1; then
+  ok "docker コマンドがあります（$(command -v docker)）"
+elif [ "$ASSUME_YES" = true ]; then
+  warn "docker コマンドがありません。Docker Desktop か Rancher Desktop を入れてください（DB の起動とマイグレーションは飛ばします）"
 else
-  warn "Docker Desktop を入れずに進めます（DB の起動とマイグレーションは飛ばします）"
+  info "docker コマンドがありません。どちらを入れますか？（どちらでも動きます）"
+  info "  1) Rancher Desktop（無料）"
+  info "  2) Docker Desktop（大きな組織での利用は有料）"
+  info "  3) 入れない（DB の起動とマイグレーションは飛ばします）"
+  read -r -p "    番号 [3]: " runtime_choice
+  runtime_app=""
+  case "${runtime_choice:-3}" in
+    1) brew install --cask rancher-desktop && runtime_app="Rancher Desktop" ;;
+    2) brew install --cask docker-desktop && runtime_app="Docker" ;;
+  esac
+  if [ -n "$runtime_app" ]; then
+    # 初回の起動時に、利用規約への同意やコンテナエンジンの選択が必要なため、ここでは自動で進めない
+    warn "「$runtime_app」を起動して初期設定を済ませてから、もう一度 ./setup.sh を実行してください"
+    if [ "$runtime_app" = "Rancher Desktop" ]; then
+      warn "Rancher Desktop の初期設定では、コンテナエンジンに「dockerd (moby)」を選んでください"
+    fi
+  fi
 fi
 
 # 2. proto のシェル設定 -----------------------------------------------------
@@ -146,19 +168,40 @@ copy_env server/.env.example server/.env
 
 step "DB の起動とマイグレーション"
 db_ready=false
-if [ ! -d /Applications/Docker.app ]; then
-  warn "Docker Desktop がないため飛ばします"
+# docker の接続先（context）から、使っているコンテナの実行環境のアプリ名を返す。
+# 判断できない場合は、入っているアプリが1つだけならそれを返し、それ以外は空を返す
+container_app() {
+  case "$(docker context show 2>/dev/null)" in
+    rancher-desktop) echo "Rancher Desktop" ;;
+    desktop-linux) echo "Docker" ;;
+    *)
+      if [ -d "/Applications/Rancher Desktop.app" ] && [ ! -d /Applications/Docker.app ]; then
+        echo "Rancher Desktop"
+      elif [ -d /Applications/Docker.app ] && [ ! -d "/Applications/Rancher Desktop.app" ]; then
+        echo "Docker"
+      fi
+      ;;
+  esac
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+  warn "docker コマンドがないため飛ばします"
 elif [ ! -f server/.env ]; then
   warn "server/.env がないため飛ばします"
 elif confirm "MySQL を起動して、マイグレーションを適用しますか？"; then
   if ! docker info >/dev/null 2>&1; then
-    info "Docker Desktop を起動しています..."
-    open -a Docker
-    for _ in $(seq 1 60); do
+    app="$(container_app)"
+    if [ -n "$app" ]; then
+      info "コンテナの実行環境（$app）を起動しています..."
+      open -a "$app"
+    else
+      info "コンテナの実行環境（Docker Desktop か Rancher Desktop）を起動してください。起動するまで待ちます..."
+    fi
+    for _ in $(seq 1 90); do
       docker info >/dev/null 2>&1 && break
       sleep 2
     done
-    docker info >/dev/null 2>&1 || fail "Docker Desktop が起動しませんでした。起動してからもう一度実行してください"
+    docker info >/dev/null 2>&1 || fail "コンテナの実行環境に接続できませんでした。起動してからもう一度実行してください"
   fi
   # healthcheck が通る（MySQL が接続を受け付ける）まで待つ
   docker compose up -d --wait
