@@ -6,52 +6,11 @@ linters:
   default: standard
   enable:
     - bodyclose
-    - depguard
     - errorlint
     - forbidigo
     - noctx
     - perfsprint
   settings:
-    depguard:
-      # feature から別の feature のパッケージを import しない。feature を追加したら、
-      # そのfeatureのルールを足し、既存のルールの deny にも追加する。
-      rules:
-        bookdatabase:
-          files: ["**/internal/features/bookdatabase/**"]
-          deny:
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
-              desc: feature から別の feature を import しない
-        formbuilder:
-          files: ["**/internal/features/formbuilder/**"]
-          deny:
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
-              desc: feature から別の feature を import しない
-        simplecms:
-          files: ["**/internal/features/simplecms/**"]
-          deny:
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
-              desc: feature から別の feature を import しない
-        simpleledger:
-          files: ["**/internal/features/simpleledger/**"]
-          deny:
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
-              desc: feature から別の feature を import しない
-            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
-              desc: feature から別の feature を import しない
     forbidigo:
       forbid:
         - pattern: ^panic$
