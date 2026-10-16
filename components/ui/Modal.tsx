@@ -29,6 +29,7 @@ export function Modal({
   children,
 }: ModalProps) {
   const titleId = useId();
+  // Escキーのリスナーを onClose が変わるたびに登録し直さないよう、最新の onClose を ref に入れておく。
   const onCloseRef = useRef(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;

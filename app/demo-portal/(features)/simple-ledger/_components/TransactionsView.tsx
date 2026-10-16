@@ -31,6 +31,7 @@ export function TransactionsView() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteTransactions(debouncedKeyword);
   const { ref: sentinelRef, inView } = useInView();
 
+  // 一覧の末尾の要素が画面に入ったこと（IntersectionObserver）に応じて、次のページを取得する。
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
