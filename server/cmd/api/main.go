@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	accesscontrolrouter "github.com/codebeaver50/my-portal/server/internal/accesscontrol/router"
 	"github.com/codebeaver50/my-portal/server/internal/admin"
 	"github.com/codebeaver50/my-portal/server/internal/contact"
 	"github.com/codebeaver50/my-portal/server/internal/db"
@@ -49,6 +50,8 @@ func main() {
 	// されている）バッチ更新、/api/admin/* とsimple-cmsのカテゴリ・記事の書き込み
 	// 系はadmin.AuthMiddleware/ログイン処理自体で保護されているため、どちらも
 	// ユーザー操作を止めるREAD_ONLYの対象外にする（管理者は本番でも操作できる）。
+	// /api/auth/login・/api/auth/logout はセッションの行を書き込むが、デモデータを
+	// 変更しないうえ、止めると本番でログインできなくなるため対象外にする。
 	// /api/contact は認可のない公開エンドポイントだが、DB/デモデータを一切変更
 	// せずメール転送するだけなので、READ_ONLYが保護したい対象（シードデータ）に
 	// 当たらず対象外にする。
@@ -56,6 +59,8 @@ func main() {
 		"/api/books/sync",
 		"/api/admin/login",
 		"/api/admin/logout",
+		"/api/auth/login",
+		"/api/auth/logout",
 		"/api/simple-cms/categories",
 		"/api/simple-cms/categories/:id",
 		"/api/simple-cms/posts",
@@ -65,6 +70,7 @@ func main() {
 
 	engine.GET("/health", handleHealth)
 	apiGroup := engine.Group("/api")
+	accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
 	admin.RegisterRoutes(apiGroup)
 	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
