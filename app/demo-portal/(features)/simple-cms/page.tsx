@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { fetchServerSession } from "@/app/demo-portal/_lib/serverSession";
 import { AdminHeader } from "./_components/AdminHeader";
 import { PostList } from "./_components/PostList";
 import { fetchPosts } from "./_lib/api";
@@ -23,14 +22,12 @@ async function loadInitialPosts(): Promise<Post[]> {
 }
 
 export default async function SimpleCmsPage() {
-  const [posts, session] = await Promise.all([loadInitialPosts(), fetchServerSession()]);
-  // 記事の投稿・編集・削除の導線は、simple-cms の write 権限があるときだけ出す
-  const canWrite = session?.permissions["simple-cms"] === "write";
+  const posts = await loadInitialPosts();
 
   return (
     <>
-      {canWrite ? <AdminHeader /> : null}
-      <PostList initialPosts={posts} canWrite={canWrite} />
+      <AdminHeader />
+      <PostList initialPosts={posts} />
     </>
   );
 }

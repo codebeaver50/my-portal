@@ -121,7 +121,7 @@ server/
 - featureの権限チェック
   - Go側（正）: 各featureの `router` で、書き込み系のルートだけをまとめたグループに `middleware.Authenticate(authSvc)` と `middleware.Require(<リソース>, permission.Write)` を付ける。`authSvc` は `cmd/api/main.go` で `accesscontrolrouter.SetupAuthRoutes` の戻り値を各featureの `SetupXxxRoutes` に渡す。現在対象にしているのは `simple-ledger`（取引の作成・更新・削除）と `form-builder`（フォーム・回答の作成・更新・削除）。読み取り系（`GET`）には付けていない（SSR時のサーバー間通信がCookieを持たないため。ゲストロールには全featureの `read` を付けている）
   - `simple-cms`（カテゴリ・記事の作成・更新・削除）も同様に `write` 権限を要求する。`book-database` の書き込みは `CRON_SECRET` で保護した `/api/books/sync` のみ
-  - `simple-cms` は「訪問者が読む記事を、権限のある人だけが書く」CMSのため、ほかのfeatureと違い、管理画面（`(admin)` 配下の投稿・編集・カテゴリ管理）自体を `write` 権限のある人にしか見せない。Server Componentで `app/demo-portal/_lib/serverSession.ts` の `fetchServerSession()`（Cookieを中継して `GET /api/auth/session` を叩く）を呼び、未ログインならログイン画面へ送り、ログイン済みで権限がなければその旨を表示する。記事一覧の投稿・編集・削除の導線も `write` 権限があるときだけ出す
+  - `simple-cms` もほかのfeatureと同様に、記事の投稿・編集・カテゴリ管理の画面は誰でも開いて操作を試せ、保存・削除のボタンだけを `write` 権限がない場合に押せなくする
   - フロントエンド側（表示の切り替えのみ）: **`read` 権限は「画面の操作は試せるが、保存・削除はできない」として扱う**。作成・編集の画面やダイアログは誰でも開けるが、保存・削除・回答の送信ボタンだけを押せなくし、理由をツールチップで出す
     - `app/demo-portal/_lib/useSession.ts` の `useWriteBlockedReason(<リソース>, <操作名>)` が、`write` 権限がなければ理由（未ログインなら「保存するにはログインが必要です」、ログイン済みなら「保存する権限がありません」）を返し、それを `components/ui` の `Button` の `blockedReason` に渡す。セッションの取得中・取得失敗時も押せない側に倒す
     - `blockedReason` 付きの `Button` は `disabled` ではなく `aria-disabled` にする（`disabled` だとフォーカスもホバーのイベントも受け取れず、キーボード・スクリーンリーダー・ホバーで理由を伝えられないため）。クリックしても `onClick`・フォームの送信は行わない

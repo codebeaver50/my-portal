@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, Select, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useCategories, useCreatePost, useUpdatePost } from "../_lib/useCms";
 import { generateDefaultPostSlug, postSchema } from "../_lib/schema";
 import { TiptapEditor } from "./TiptapEditor";
@@ -16,6 +17,7 @@ export function PostForm({ post }: { post?: Post }) {
   const { data: categories = [] } = useCategories();
   const createMutation = useCreatePost();
   const updateMutation = useUpdatePost();
+  const saveBlockedReason = useWriteBlockedReason("simple-cms", "保存");
   const { showToast } = useToast();
   const isEditing = post !== undefined;
 
@@ -126,7 +128,12 @@ export function PostForm({ post }: { post?: Post }) {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
-      <Button className="w-auto" onClick={handleSubmit} disabled={isPending || categories.length === 0}>
+      <Button
+        className="w-auto"
+        onClick={handleSubmit}
+        disabled={isPending || categories.length === 0}
+        blockedReason={saveBlockedReason}
+      >
         {isPending ? "保存中..." : isEditing ? "更新する" : "記事を公開"}
       </Button>
     </div>

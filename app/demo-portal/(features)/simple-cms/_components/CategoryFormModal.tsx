@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Modal, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useCreateCategory, useUpdateCategory } from "../_lib/useCms";
 import { categorySchema } from "../_lib/schema";
 import type { Category } from "../_lib/types";
@@ -16,6 +17,7 @@ export function CategoryFormModal({ open, onClose, category }: CategoryFormModal
   const isEdit = Boolean(category);
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
+  const saveBlockedReason = useWriteBlockedReason("simple-cms", "保存");
   const { showToast } = useToast();
 
   const [name, setName] = useState(category?.name ?? "");
@@ -65,7 +67,7 @@ export function CategoryFormModal({ open, onClose, category }: CategoryFormModal
           <Button variant="secondary" className="w-auto" onClick={resetAndClose}>
             キャンセル
           </Button>
-          <Button className="w-auto" onClick={handleSubmit} disabled={isPending}>
+          <Button className="w-auto" onClick={handleSubmit} disabled={isPending} blockedReason={saveBlockedReason}>
             {isPending ? "保存中..." : isEdit ? "更新" : "保存"}
           </Button>
         </>

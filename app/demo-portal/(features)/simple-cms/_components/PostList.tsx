@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Badge, Button, Card, CardHeader, CardTitle, LinkButton, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useDeletePost, usePosts } from "../_lib/useCms";
 import type { Post } from "../_lib/types";
 import { EditIcon, TrashIcon } from "./icons";
@@ -10,10 +11,11 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
 }
 
-export function PostList({ initialPosts, canWrite = false }: { initialPosts: Post[]; canWrite?: boolean }) {
+export function PostList({ initialPosts }: { initialPosts: Post[] }) {
   const { data: posts = initialPosts } = usePosts();
   const deleteMutation = useDeletePost();
   const { showToast } = useToast();
+  const deleteBlockedReason = useWriteBlockedReason("simple-cms", "削除");
 
   function handleDelete(post: Post) {
     if (!window.confirm(`「${post.title}」を削除しますか？`)) return;
@@ -40,27 +42,26 @@ export function PostList({ initialPosts, canWrite = false }: { initialPosts: Pos
                 {post.category ? <Badge>{post.category.name}</Badge> : null}
                 <span className="text-xs text-muted-foreground">{formatDate(post.createdAt)}</span>
               </div>
-              {canWrite ? (
-                <div className="flex shrink-0 gap-2">
-                  <LinkButton
-                    href={`/demo-portal/simple-cms/edit/${post.slug}`}
-                    variant="secondary"
-                    className="w-auto px-2.5 py-2"
-                    aria-label={`${post.title}を編集`}
-                  >
-                    <EditIcon className="size-4" />
-                  </LinkButton>
-                  <Button
-                    variant="secondary"
-                    className="w-auto px-2.5 py-2"
-                    onClick={() => handleDelete(post)}
-                    disabled={deleteMutation.isPending}
-                    aria-label={`${post.title}を削除`}
-                  >
-                    <TrashIcon className="size-4" />
-                  </Button>
-                </div>
-              ) : null}
+              <div className="flex shrink-0 gap-2">
+                <LinkButton
+                  href={`/demo-portal/simple-cms/edit/${post.slug}`}
+                  variant="secondary"
+                  className="w-auto px-2.5 py-2"
+                  aria-label={`${post.title}を編集`}
+                >
+                  <EditIcon className="size-4" />
+                </LinkButton>
+                <Button
+                  variant="secondary"
+                  className="w-auto px-2.5 py-2"
+                  onClick={() => handleDelete(post)}
+                  disabled={deleteMutation.isPending}
+                  aria-label={`${post.title}を削除`}
+                  blockedReason={deleteBlockedReason}
+                >
+                  <TrashIcon className="size-4" />
+                </Button>
+              </div>
             </div>
             <Link href={`/demo-portal/simple-cms/${post.slug}`} className="hover:underline">
               <CardTitle>{post.title}</CardTitle>

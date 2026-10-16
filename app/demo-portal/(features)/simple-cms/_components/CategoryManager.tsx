@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Table, TableCell, TableHeaderCell, TableRow, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useCategories, useDeleteCategory } from "../_lib/useCms";
 import { CategoryFormModal } from "./CategoryFormModal";
 import { EditIcon, PlusIcon, TrashIcon } from "./icons";
@@ -11,6 +12,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
   const { data: categories = initialCategories } = useCategories();
   const deleteMutation = useDeleteCategory();
   const { showToast } = useToast();
+  const deleteBlockedReason = useWriteBlockedReason("simple-cms", "削除");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
@@ -79,6 +81,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
                       onClick={() => handleDelete(category)}
                       disabled={deleteMutation.isPending}
                       aria-label={`${category.name}を削除`}
+                      blockedReason={deleteBlockedReason}
                     >
                       <TrashIcon className="size-4" />
                     </Button>
