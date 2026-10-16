@@ -19,7 +19,7 @@ services:
 
   # ローカルでContactフォームのメール送信をテストするためのSMTPキャッチャー。
   # 実際には外部に送信せず、Web UI（http://localhost:8025）で受信内容を確認できる。
-  # .env の CONTACT_SMTP_* をこのコンテナ向けに設定して使う（値は .env.example のコメントを参照）。
+  # server/.env の CONTACT_SMTP_* をこのコンテナ向けに設定して使う（値は server/.env.example のコメントを参照）。
   mailpit:
     image: axllent/mailpit:v1
     restart: unless-stopped

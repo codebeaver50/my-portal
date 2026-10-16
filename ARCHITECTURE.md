@@ -63,7 +63,7 @@ server/
   - 複数featureで共有する処理（GORMのDB接続等）は`internal/db/`のようにfeature非依存の場所に置く
   - `PORT` 環境変数をリッスンするGinサーバー。本番では `server/Dockerfile` でビルドしたコンテナとして動かす
   - CaddyがNext.js（web）とGo API（api）を同じ公開ドメインの配下に集約する（`/api/*`・`/health` はapiへ、それ以外はwebへ）ため、Next.js・Go APIは同一オリジンになる。それでもGo側の`ALLOWED_ORIGIN`環境変数でCORS許可オリジンを明示する
-  - Next.js側はfeatureのServer Component・Client Componentともに `NEXT_PUBLIC_API_BASE_URL` 環境変数（ローカルは `.env`、サンプルは `.env.example`）でGo APIのベースURLを参照する。同一オリジンの公開ドメインを指すため、SSR時のサーバー間通信もブラウザからの呼び出しも同じURLを使う
+  - Next.js側はfeatureのServer Component・Client Componentともに `NEXT_PUBLIC_API_BASE_URL` 環境変数（ローカルはルートの `.env`、サンプルは `.env.example`）でGo APIのベースURLを参照する。同一オリジンの公開ドメインを指すため、SSR時のサーバー間通信もブラウザからの呼び出しも同じURLを使う
 
 ## DBマイグレーション
 
@@ -101,7 +101,7 @@ server/
   - `Dockerfile`（ルート、Next.js用）: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build。`NEXT_PUBLIC_API_BASE_URL` はビルド時にJSへ埋め込まれるため、`docker compose build` 時にbuild argとして渡す
   - `server/Dockerfile`: `api`・`migrate`・`createuser` のバイナリを1つのイメージに含め、`docker-compose.prod.yml`側でどれを起動するかを切り替える
   - `Caddyfile`: 単一の公開ドメインで、`/api/*`・`/health` を`api`コンテナへ、それ以外を`web`コンテナへリバースプロキシする。Let's Encrypt証明書の取得・更新もCaddyが自動で行う
-- 環境変数は `.env.prod`（git管理しない、Lightsail Instance上にのみ置く）にまとめ、`docker compose --env-file .env.prod -f docker-compose.prod.yml ...` で読み込む（`DOMAIN` / `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` / `CRON_SECRET` / `READ_ONLY` / `CONTACT_SMTP_*` 等）。`.env.prod` はルートの `.env.example`（ローカル・本番の両方のキーを含むサンプル）をコピーして作る。`READ_ONLY`の詳細は後述の「READ_ONLYモード」を参照
+- 環境変数は `.env.prod`（git管理しない、Lightsail Instance上にのみ置く）にまとめ、`docker compose --env-file .env.prod -f docker-compose.prod.yml ...` で読み込む（`DOMAIN` / `MYSQL_ROOT_PASSWORD` / `MYSQL_PASSWORD` / `CRON_SECRET` / `READ_ONLY` / `CONTACT_SMTP_*` 等）。`.env.prod` はルートの `.env.example`（ローカルの Next.js 用と本番のキーを含むサンプル）をコピーして作る。ローカルの Go API の環境変数は `server/.env`（サンプルは `server/.env.example`）に分けている。`READ_ONLY`の詳細は後述の「READ_ONLYモード」を参照
 - マイグレーションは常時起動サービスにせず、`docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm migrate up` で都度実行する
 - Lightsail側の設定: Networkingタブで80/443番ポートを開放し、インスタンスの静的IPをドメインのAレコードに割り当てる（CaddyのHTTP-01検証に必要）
 - Lightsailのインスタンスはメモリが小さく、MySQL等の起動時にOOMが発生しやすいため、スワップを設定する（インスタンス初回セットアップ時に1回実行すればよい）:

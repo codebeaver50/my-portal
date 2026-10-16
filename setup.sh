@@ -151,38 +151,41 @@ fi
 
 # 5. 環境変数のファイル -----------------------------------------------------
 
-step "環境変数のファイル（.env）"
-if [ -f .env ]; then
-  ok ".env はあります（上書きしません）"
-elif confirm ".env.example からローカル用の .env を作りますか？"; then
-  # 問い合わせフォームのメールは、ローカルでは mailpit（docker-compose.yml）で受け取る
-  sed \
-    -e 's/^CONTACT_SMTP_HOST=$/CONTACT_SMTP_HOST=localhost/' \
-    -e 's/^CONTACT_SMTP_PORT=$/CONTACT_SMTP_PORT=1025/' \
-    -e 's/^CONTACT_SMTP_USERNAME=$/CONTACT_SMTP_USERNAME=contact/' \
-    -e 's/^CONTACT_SMTP_PASSWORD=$/CONTACT_SMTP_PASSWORD=contact/' \
-    -e 's/^CONTACT_FROM_EMAIL=$/CONTACT_FROM_EMAIL=no-reply@example.com/' \
-    -e 's/^CONTACT_TO_EMAIL=$/CONTACT_TO_EMAIL=test@example.com/' \
-    .env.example >.env
-  ok ".env を作りました（問い合わせメールは http://localhost:8025 の mailpit で確認できます）"
-fi
-# 以前は Next.js 用に .env.local、Go API 用に server/.env を分けて作っていた
+step "環境変数のファイル（.env / server/.env）"
+# create_env 作成元 作成先 [sed の引数...] : 作成先がなければ、作成元をコピーして作る
+create_env() {
+  local src="$1" dest="$2"
+  shift 2
+  if [ -f "$dest" ]; then
+    ok "$dest はあります（上書きしません）"
+  elif confirm "$src から $dest を作りますか？"; then
+    sed "$@" "$src" >"$dest"
+    ok "$dest を作りました"
+  fi
+}
+# Next.js 用。「本番のみ」の節は空のままでよい
+create_env .env.example .env -e ''
+# Go API 用。問い合わせフォームのメールは、ローカルでは mailpit（docker-compose.yml）で受け取る
+create_env server/.env.example server/.env \
+  -e 's/^CONTACT_SMTP_HOST=$/CONTACT_SMTP_HOST=localhost/' \
+  -e 's/^CONTACT_SMTP_PORT=$/CONTACT_SMTP_PORT=1025/' \
+  -e 's/^CONTACT_SMTP_USERNAME=$/CONTACT_SMTP_USERNAME=contact/' \
+  -e 's/^CONTACT_SMTP_PASSWORD=$/CONTACT_SMTP_PASSWORD=contact/' \
+  -e 's/^CONTACT_FROM_EMAIL=$/CONTACT_FROM_EMAIL=no-reply@example.com/' \
+  -e 's/^CONTACT_TO_EMAIL=$/CONTACT_TO_EMAIL=test@example.com/'
 if [ -f .env.local ]; then
   warn ".env.local は .env より優先して Next.js に読み込まれます。不要なら削除してください"
 fi
-if [ -f server/.env ]; then
-  warn "server/.env は使われなくなりました（ルートの .env を使います）。不要なら削除してください"
-fi
 
-# with_env コマンド... : .env を読み込んだうえで、server/ でコマンドを実行する
+# with_env コマンド... : server/.env を読み込んだうえで、server/ でコマンドを実行する
 # （Go API は .env を自動で読み込まないため）
 with_env() {
   (
+    cd server
     set -a
     # shellcheck disable=SC1091
     source .env
     set +a
-    cd server
     "$@"
   )
 }
@@ -209,8 +212,8 @@ container_app() {
 
 if ! command -v docker >/dev/null 2>&1; then
   warn "docker コマンドがないため飛ばします"
-elif [ ! -f .env ]; then
-  warn ".env がないため飛ばします"
+elif [ ! -f server/.env ]; then
+  warn "server/.env がないため飛ばします"
 elif confirm "MySQL を起動して、マイグレーションを適用しますか？"; then
   if ! docker info >/dev/null 2>&1; then
     app="$(container_app)"
@@ -253,7 +256,7 @@ cat <<'EOF'
     起動するには、2つのターミナルで次を実行してください。
 
       # Go API（http://localhost:8080）
-      set -a && source .env && set +a && cd server && go run ./cmd/api
+      cd server && set -a && source .env && set +a && go run ./cmd/api
 
       # Next.js（http://localhost:3000）
       npm run dev
