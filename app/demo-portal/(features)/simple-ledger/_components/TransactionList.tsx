@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge, Button, Card, Table, TableCell, TableHeaderCell, TableRow, useToast } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useDeleteTransaction } from "../_lib/useTransactions";
 import { EditIcon, TrashIcon } from "./icons";
 import type { Transaction } from "../_lib/types";
@@ -17,6 +18,7 @@ type TransactionListProps = {
 export function TransactionList({ transactions, onEdit }: TransactionListProps) {
   const deleteMutation = useDeleteTransaction();
   const { showToast } = useToast();
+  const deleteBlockedReason = useWriteBlockedReason("simple-ledger", "削除");
 
   function handleDelete(transaction: Transaction) {
     if (!window.confirm(`「${transaction.description || "この取引"}」を削除しますか？`)) return;
@@ -95,6 +97,7 @@ export function TransactionList({ transactions, onEdit }: TransactionListProps) 
                         className="w-auto px-2.5 py-2"
                         aria-label="削除"
                         onClick={() => handleDelete(transaction)}
+                        blockedReason={deleteBlockedReason}
                       >
                         <TrashIcon className="size-4" />
                       </Button>

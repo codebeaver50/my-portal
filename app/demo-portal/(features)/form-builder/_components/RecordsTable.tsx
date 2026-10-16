@@ -12,6 +12,7 @@ import {
   TableRow,
   useToast,
 } from "@/components/ui";
+import { useWriteBlockedReason } from "@/app/demo-portal/_lib/useSession";
 import { useDeleteRecord, useRecords } from "../_lib/useForms";
 import { TrashIcon } from "./icons";
 import type { Form, FormField, FormRecord, RecordValue } from "../_lib/types";
@@ -53,6 +54,7 @@ export function RecordsTable({ form }: { form: Form }) {
   const [deleting, setDeleting] = useState<FormRecord | null>(null);
   const deleteMutation = useDeleteRecord(form.id);
   const { showToast } = useToast();
+  const deleteBlockedReason = useWriteBlockedReason("form-builder", "削除");
 
   function handleDelete() {
     if (!deleting) return;
@@ -175,7 +177,13 @@ export function RecordsTable({ form }: { form: Form }) {
             <Button variant="secondary" className="w-auto" onClick={() => setDeleting(null)}>
               キャンセル
             </Button>
-            <Button variant="danger" className="w-auto" disabled={deleteMutation.isPending} onClick={handleDelete}>
+            <Button
+              variant="danger"
+              className="w-auto"
+              disabled={deleteMutation.isPending}
+              onClick={handleDelete}
+              blockedReason={deleteBlockedReason}
+            >
               削除する
             </Button>
           </>

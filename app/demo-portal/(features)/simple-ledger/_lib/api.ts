@@ -60,6 +60,7 @@ export async function fetchTransactionsPaginated(
 export async function createTransaction(input: TransactionInput): Promise<Transaction> {
   const response = await fetch(`${getApiBaseUrl()}/api/simple-ledger/transactions`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -72,6 +73,7 @@ export async function createTransaction(input: TransactionInput): Promise<Transa
 export async function updateTransaction(id: number, input: TransactionInput): Promise<Transaction> {
   const response = await fetch(`${getApiBaseUrl()}/api/simple-ledger/transactions/${id}`, {
     method: "PUT",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
@@ -84,6 +86,7 @@ export async function updateTransaction(id: number, input: TransactionInput): Pr
 export async function deleteTransaction(id: number): Promise<void> {
   const response = await fetch(`${getApiBaseUrl()}/api/simple-ledger/transactions/${id}`, {
     method: "DELETE",
+    credentials: "include",
   });
   if (!response.ok) {
     throw new Error(await parseErrorMessage(response, "取引の削除に失敗しました"));
