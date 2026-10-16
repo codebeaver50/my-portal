@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -28,7 +29,7 @@ func (r *SessionRepository) Create(ctx context.Context, session *models.Session)
 func (r *SessionRepository) GetByTokenHash(ctx context.Context, tokenHash string) (*models.Session, error) {
 	var session models.Session
 	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&session).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

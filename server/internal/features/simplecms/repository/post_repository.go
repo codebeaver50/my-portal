@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -31,7 +32,7 @@ func (r *PostRepository) Create(ctx context.Context, post *models.Post) error {
 func (r *PostRepository) GetByID(ctx context.Context, id uint) (*models.Post, error) {
 	var post models.Post
 	err := r.preload(r.db.WithContext(ctx)).First(&post, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -44,7 +45,7 @@ func (r *PostRepository) GetByID(ctx context.Context, id uint) (*models.Post, er
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*models.Post, error) {
 	var post models.Post
 	err := r.preload(r.db.WithContext(ctx)).Where("slug = ?", slug).First(&post).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

@@ -153,7 +153,7 @@ func TestBookService_FetchCoverImage_SetsRefererFromSourceOrigin(t *testing.T) {
 	defer ts.Close()
 
 	svc := NewBookService(nil)
-	resp, err := svc.FetchCoverImage(ts.URL + "/cover.jpg")
+	resp, err := svc.FetchCoverImage(context.Background(), ts.URL+"/cover.jpg")
 	if err != nil {
 		t.Fatalf("FetchCoverImage() error = %v", err)
 	}

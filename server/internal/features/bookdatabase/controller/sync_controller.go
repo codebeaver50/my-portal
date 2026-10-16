@@ -3,7 +3,6 @@ package controller
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -41,10 +40,9 @@ func (ctrl *syncController) Sync() gin.HandlerFunc {
 
 // CronAuthMiddleware は CRON_SECRET ベアラートークンによる認可を行う
 // Ginミドルウェア。Vercel Cron job として動いていた頃のチェックを踏襲して
-// おり、CRON_SECRET未設定時はローカル開発用にチェックをスキップする。
-func CronAuthMiddleware() gin.HandlerFunc {
+// おり、cronSecret が空（CRON_SECRET未設定）の場合はローカル開発用にチェックをスキップする。
+func CronAuthMiddleware(cronSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cronSecret := os.Getenv("CRON_SECRET")
 		if cronSecret != "" && c.Request.Header.Get("Authorization") != "Bearer "+cronSecret {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			return

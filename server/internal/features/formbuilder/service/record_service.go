@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/mail"
@@ -89,7 +90,7 @@ func normalizeValue(field models.FormField, raw any) (any, error) {
 	var options []string
 	if field.Type.HasOptions() {
 		if err := json.Unmarshal([]byte(field.Options), &options); err != nil {
-			return nil, fmt.Errorf("選択肢の読み込みに失敗しました")
+			return nil, errors.New("選択肢の読み込みに失敗しました")
 		}
 	}
 
@@ -97,23 +98,23 @@ func normalizeValue(field models.FormField, raw any) (any, error) {
 	case models.NumberField:
 		number, ok := raw.(float64)
 		if !ok {
-			return nil, fmt.Errorf("数値を入力してください")
+			return nil, errors.New("数値を入力してください")
 		}
 		if math.IsNaN(number) || math.Abs(number) > maxNumberAbs {
-			return nil, fmt.Errorf("入力できる範囲を超えています")
+			return nil, errors.New("入力できる範囲を超えています")
 		}
 		return number, nil
 
 	case models.CheckboxField:
 		items, ok := raw.([]any)
 		if !ok {
-			return nil, fmt.Errorf("選択肢の形式が不正です")
+			return nil, errors.New("選択肢の形式が不正です")
 		}
 		selected := make([]string, 0, len(items))
 		for _, item := range items {
 			option, ok := item.(string)
 			if !ok || !slices.Contains(options, option) {
-				return nil, fmt.Errorf("選択肢にない値が含まれています")
+				return nil, errors.New("選択肢にない値が含まれています")
 			}
 			if !slices.Contains(selected, option) {
 				selected = append(selected, option)
@@ -131,7 +132,7 @@ func normalizeValue(field models.FormField, raw any) (any, error) {
 
 	text, ok := raw.(string)
 	if !ok {
-		return nil, fmt.Errorf("文字列を入力してください")
+		return nil, errors.New("文字列を入力してください")
 	}
 	if strings.TrimSpace(text) == "" {
 		return nil, nil
@@ -151,18 +152,18 @@ func normalizeValue(field models.FormField, raw any) (any, error) {
 		text = strings.TrimSpace(text)
 		address, err := mail.ParseAddress(text)
 		if err != nil || address.Address != text || len(text) > maxEmailLength {
-			return nil, fmt.Errorf("メールアドレスの形式が正しくありません")
+			return nil, errors.New("メールアドレスの形式が正しくありません")
 		}
 	case models.DateField:
 		if _, err := time.Parse("2006-01-02", text); err != nil {
-			return nil, fmt.Errorf("日付はYYYY-MM-DD形式で入力してください")
+			return nil, errors.New("日付はYYYY-MM-DD形式で入力してください")
 		}
 	case models.SelectField, models.RadioField:
 		if !slices.Contains(options, text) {
-			return nil, fmt.Errorf("選択肢にない値です")
+			return nil, errors.New("選択肢にない値です")
 		}
 	default:
-		return nil, fmt.Errorf("未対応の入力形式です")
+		return nil, errors.New("未対応の入力形式です")
 	}
 	return text, nil
 }

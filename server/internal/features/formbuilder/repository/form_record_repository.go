@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -27,7 +28,7 @@ func (r *FormRecordRepository) Create(ctx context.Context, record *models.FormRe
 func (r *FormRecordRepository) GetByID(ctx context.Context, id uint) (*models.FormRecord, error) {
 	var record models.FormRecord
 	err := r.db.WithContext(ctx).First(&record, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

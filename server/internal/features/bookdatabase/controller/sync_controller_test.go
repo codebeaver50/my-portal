@@ -27,7 +27,7 @@ func TestSyncController_Sync(t *testing.T) {
 	t.Run("no CRON_SECRET set allows the request and returns the summary", func(t *testing.T) {
 		svc := &fakeSyncService{resp: &dto.SyncSummaryResponse{Created: 3}}
 		r := gin.New()
-		r.GET("/books/sync", CronAuthMiddleware(), NewSyncController(svc).Sync())
+		r.GET("/books/sync", CronAuthMiddleware(""), NewSyncController(svc).Sync())
 
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/books/sync", nil))
@@ -45,9 +45,8 @@ func TestSyncController_Sync(t *testing.T) {
 	})
 
 	t.Run("CRON_SECRET set rejects a request without a matching bearer token", func(t *testing.T) {
-		t.Setenv("CRON_SECRET", "s3cret")
 		r := gin.New()
-		r.GET("/books/sync", CronAuthMiddleware(), NewSyncController(&fakeSyncService{}).Sync())
+		r.GET("/books/sync", CronAuthMiddleware("s3cret"), NewSyncController(&fakeSyncService{}).Sync())
 
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/books/sync", nil))
@@ -58,10 +57,9 @@ func TestSyncController_Sync(t *testing.T) {
 	})
 
 	t.Run("CRON_SECRET set accepts a request with a matching bearer token", func(t *testing.T) {
-		t.Setenv("CRON_SECRET", "s3cret")
 		svc := &fakeSyncService{resp: &dto.SyncSummaryResponse{}}
 		r := gin.New()
-		r.GET("/books/sync", CronAuthMiddleware(), NewSyncController(svc).Sync())
+		r.GET("/books/sync", CronAuthMiddleware("s3cret"), NewSyncController(svc).Sync())
 
 		req := httptest.NewRequest(http.MethodGet, "/books/sync", nil)
 		req.Header.Set("Authorization", "Bearer s3cret")
@@ -76,7 +74,7 @@ func TestSyncController_Sync(t *testing.T) {
 	t.Run("service error returns 500", func(t *testing.T) {
 		svc := &fakeSyncService{err: errors.New("sync failed")}
 		r := gin.New()
-		r.GET("/books/sync", CronAuthMiddleware(), NewSyncController(svc).Sync())
+		r.GET("/books/sync", CronAuthMiddleware(""), NewSyncController(svc).Sync())
 
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/books/sync", nil))

@@ -29,7 +29,7 @@ type fakeNDLCall struct {
 	maximumRecords int
 }
 
-func (f *fakeNDLClient) SearchSru(query string, startRecord, maximumRecords int) (*ndl.SearchResult, error) {
+func (f *fakeNDLClient) SearchSru(_ context.Context, query string, startRecord, maximumRecords int) (*ndl.SearchResult, error) {
 	f.calls = append(f.calls, fakeNDLCall{query, startRecord, maximumRecords})
 	if f.err != nil {
 		return nil, f.err
@@ -47,7 +47,7 @@ type fakeOpenBDClient struct {
 	err    error
 }
 
-func (f *fakeOpenBDClient) FetchCovers(isbn13List []string) (map[string]string, error) {
+func (f *fakeOpenBDClient) FetchCovers(_ context.Context, isbn13List []string) (map[string]string, error) {
 	f.calls = append(f.calls, isbn13List)
 	if f.err != nil {
 		return nil, f.err

@@ -45,7 +45,7 @@ func (f *fakeBookService) GetCoverImageURL(ctx context.Context, bookID int64) (s
 	return f.coverURL, f.coverErr
 }
 
-func (f *fakeBookService) FetchCoverImage(sourceURL string) (*http.Response, error) {
+func (f *fakeBookService) FetchCoverImage(_ context.Context, sourceURL string) (*http.Response, error) {
 	f.fetchSourceURL = sourceURL
 	return f.fetchResp, f.fetchErr
 }

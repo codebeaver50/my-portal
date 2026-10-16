@@ -72,7 +72,7 @@ func main() {
 	authSvc := accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
 	accesscontrolrouter.SetupAccessControlRoutes(apiGroup, conn, authSvc)
 	contact.RegisterRoutes(apiGroup)
-	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
+	bookdatabaserouter.SetupBookRoutes(apiGroup, conn, os.Getenv("CRON_SECRET"))
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn, authSvc)
 	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn, authSvc)
 	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn, authSvc)

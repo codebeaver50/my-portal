@@ -4,14 +4,19 @@
 package openbd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const endpoint = "https://api.openbd.jp/v1/get"
+
+// httpClient はopenBDが応答しない場合にsyncのバッチが止まり続けないよう、タイムアウトを設定する。
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 type record struct {
 	Summary *struct {
@@ -23,7 +28,7 @@ type record struct {
 // FetchCovers は指定のISBNのうちopenBDにカバー画像があるものについて、
 // isbn13 -> カバー画像URL のマップを返す。空の入力の場合はリクエストせずに
 // 空のマップを返す。
-func FetchCovers(isbn13List []string) (map[string]string, error) {
+func FetchCovers(ctx context.Context, isbn13List []string) (map[string]string, error) {
 	covers := make(map[string]string)
 	if len(isbn13List) == 0 {
 		return covers, nil
@@ -39,7 +44,11 @@ func FetchCovers(isbn13List []string) (map[string]string, error) {
 	q.Set("isbn", joined)
 	u.RawQuery = q.Encode()
 
-	resp, err := http.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

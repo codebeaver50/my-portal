@@ -36,13 +36,23 @@ func sampleFormRequest() *dto.FormRequest {
 	}
 }
 
-func assertValidationError(t *testing.T, err error) *ValidationError {
+// requireValidationError は err が *ValidationError であることを確かめて返す。
+func requireValidationError(t *testing.T, err error) *ValidationError {
 	t.Helper()
 	var validationErr *ValidationError
 	if !errors.As(err, &validationErr) {
 		t.Fatalf("err = %v, want *ValidationError", err)
 	}
 	return validationErr
+}
+
+// assertValidationError は err が *ValidationError であることだけを確かめる。
+func assertValidationError(t *testing.T, err error) {
+	t.Helper()
+	var validationErr *ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("err = %v, want *ValidationError", err)
+	}
 }
 
 func TestFormService_Create(t *testing.T) {

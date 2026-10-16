@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -34,7 +35,7 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 func (r *UserRepository) GetByID(ctx context.Context, id uint) (*models.User, error) {
 	var user models.User
 	err := r.db.WithContext(ctx).First(&user, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -47,7 +48,7 @@ func (r *UserRepository) GetByID(ctx context.Context, id uint) (*models.User, er
 func (r *UserRepository) GetByLoginID(ctx context.Context, loginID string) (*models.User, error) {
 	var user models.User
 	err := r.db.WithContext(ctx).Where("login_id = ?", loginID).First(&user).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

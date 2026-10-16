@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -38,7 +39,7 @@ func (r *TransactionRepository) Create(ctx context.Context, transaction *models.
 func (r *TransactionRepository) GetByID(ctx context.Context, id uint) (*models.Transaction, error) {
 	var transaction models.Transaction
 	err := r.preload(r.db.WithContext(ctx)).First(&transaction, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

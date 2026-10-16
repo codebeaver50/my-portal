@@ -12,8 +12,8 @@ import (
 )
 
 // SetupBookRoutes は book database feature のルートをapiGroup配下に登録
-// する（例: GET /api/books）。
-func SetupBookRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
+// する（例: GET /api/books）。cronSecret は /api/books/sync の認可に使う CRON_SECRET の値。
+func SetupBookRoutes(apiGroup *gin.RouterGroup, db *gorm.DB, cronSecret string) {
 	bookRepo := repository.NewBookRepository(db)
 	publisherRepo := repository.NewPublisherRepository(db)
 	authorRepo := repository.NewAuthorRepository(db)
@@ -30,7 +30,7 @@ func SetupBookRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 		books.GET("/:id/cover", bookCtrl.Cover())
 
 		sync := books.Group("/sync")
-		sync.Use(controller.CronAuthMiddleware())
+		sync.Use(controller.CronAuthMiddleware(cronSecret))
 		{
 			sync.GET("", syncCtrl.Sync())
 			sync.POST("", syncCtrl.Sync())
