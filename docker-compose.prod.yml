@@ -92,6 +92,22 @@ services:
       mysql:
         condition: service_healthy
 
+  # アクセス管理（RBAC）のユーザー作成用（例: サイト運営者の管理者アカウント）。必要なときだけ実行する:
+  #   docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm createuser -login <ログインID> -name <表示名> -role admin
+  # パスワードは実行後のプロンプトで入力する（引数や.env.prodには書かない）。
+  # profiles を付けて、`up` で起動されないようにしている（`run` で名前を指定したときだけ動く）。
+  createuser:
+    image: ghcr.io/codebeaver50/my-portal-api:latest
+    build:
+      context: ./server
+    entrypoint: ["/usr/local/bin/createuser"]
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: mysql://app:${MYSQL_PASSWORD}@tcp(mysql:3306)/my_portal
+    depends_on:
+      mysql:
+        condition: service_healthy
+
   web:
     image: ghcr.io/codebeaver50/my-portal-web:latest
     build:

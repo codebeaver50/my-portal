@@ -89,3 +89,8 @@ func (r *RoleRepository) CreatePermissions(ctx context.Context, permissions []mo
 	}
 	return r.db.WithContext(ctx).Create(&permissions).Error
 }
+
+// CreateUserRole はユーザーにロールを割り当てる。
+func (r *RoleRepository) CreateUserRole(ctx context.Context, userRole *models.UserRole) error {
+	return r.db.WithContext(ctx).Create(userRole).Error
+}
