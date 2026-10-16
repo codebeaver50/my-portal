@@ -78,8 +78,12 @@ func (ctrl *transactionController) Create() gin.HandlerFunc {
 		}
 
 		result, err := ctrl.service.Create(c.Request.Context(), &req)
+		if writeValidationError(c, err) {
+			return
+		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-ledger: create transaction failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusCreated, result)
@@ -106,8 +110,12 @@ func (ctrl *transactionController) Update() gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		if writeValidationError(c, err) {
+			return
+		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-ledger: update transaction failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusOK, result)

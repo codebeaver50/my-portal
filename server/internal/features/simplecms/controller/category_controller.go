@@ -55,11 +55,15 @@ func (ctrl *categoryController) Create() gin.HandlerFunc {
 
 		result, err := ctrl.service.Create(c.Request.Context(), &req)
 		if errors.Is(err, service.ErrCategorySlugTaken) {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, gin.H{"error": "このスラッグは既に使われています"})
+			return
+		}
+		if writeValidationError(c, err) {
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-cms: create category failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusCreated, result)
@@ -87,11 +91,15 @@ func (ctrl *categoryController) Update() gin.HandlerFunc {
 			return
 		}
 		if errors.Is(err, service.ErrCategorySlugTaken) {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, gin.H{"error": "このスラッグは既に使われています"})
+			return
+		}
+		if writeValidationError(c, err) {
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-cms: update category failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusOK, result)
@@ -112,9 +120,13 @@ func (ctrl *categoryController) Delete() gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		if errors.Is(err, service.ErrCategoryInUse) {
+			c.JSON(http.StatusConflict, gin.H{"error": "カテゴリに紐づく記事が存在するため削除できません"})
+			return
+		}
 		if err != nil {
 			log.Printf("simple-cms: delete category failed: %v", err)
-			c.JSON(http.StatusConflict, gin.H{"error": "カテゴリに紐づく記事が存在するため削除できません"})
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.Status(http.StatusNoContent)

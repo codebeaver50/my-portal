@@ -44,7 +44,7 @@ func (s *postService) validate(ctx context.Context, req *dto.PostRequest, exclud
 		return err
 	}
 	if category == nil {
-		return ErrCategoryNotFound
+		return &ValidationError{Message: "選択したカテゴリが存在しません"}
 	}
 
 	existing, err := s.postRepo.GetBySlug(ctx, req.Slug)

@@ -129,6 +129,32 @@ func TestTransactionController_Create(t *testing.T) {
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("status = %d, want 400", w.Code)
 		}
+		var resp struct {
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("failed to unmarshal body: %v", err)
+		}
+		if resp.Error != service.ErrUnbalancedEntries.Message {
+			t.Errorf("error = %q, want %q", resp.Error, service.ErrUnbalancedEntries.Message)
+		}
+	})
+
+	t.Run("unexpected service error returns 500 without the error message", func(t *testing.T) {
+		svc := &fakeTransactionService{createErr: errors.New("Error 1452: Cannot add or update a child row")}
+		r := gin.New()
+		r.POST("/transactions", NewTransactionController(svc).Create())
+
+		body := `{"date":"2026-01-15","journalEntries":[{"chartOfAccountsId":1,"type":"debit","amount":100},{"chartOfAccountsId":2,"type":"credit","amount":100}]}`
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/transactions", bytes.NewBufferString(body)))
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("status = %d, want 500", w.Code)
+		}
+		if w.Body.Len() != 0 {
+			t.Errorf("body = %q, want empty", w.Body.String())
+		}
 	})
 }
 

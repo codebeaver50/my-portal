@@ -71,11 +71,15 @@ func (ctrl *postController) Create() gin.HandlerFunc {
 
 		result, err := ctrl.service.Create(c.Request.Context(), &req)
 		if errors.Is(err, service.ErrPostSlugTaken) {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, gin.H{"error": "このスラッグは既に使われています"})
+			return
+		}
+		if writeValidationError(c, err) {
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-cms: create post failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusCreated, result)
@@ -103,11 +107,15 @@ func (ctrl *postController) Update() gin.HandlerFunc {
 			return
 		}
 		if errors.Is(err, service.ErrPostSlugTaken) {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			c.JSON(http.StatusConflict, gin.H{"error": "このスラッグは既に使われています"})
+			return
+		}
+		if writeValidationError(c, err) {
 			return
 		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-cms: update post failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusOK, result)

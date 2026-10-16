@@ -17,7 +17,10 @@ var ErrTransactionNotFound = errors.New("transaction not found")
 
 // ErrUnbalancedEntries は仕訳明細が複式簿記のルール（借方合計=貸方合計、
 // 借方・貸方それぞれ最低1件）を満たさない場合に返される。
-var ErrUnbalancedEntries = errors.New("debit total must equal credit total, and at least one debit and one credit entry are required")
+var ErrUnbalancedEntries = &ValidationError{Message: "借方と貸方をそれぞれ1件以上入力し、借方と貸方の合計金額を一致させてください"}
+
+// errInvalidDate は取引日が YYYY-MM-DD 形式でない場合に返される。
+var errInvalidDate = &ValidationError{Message: "取引日はYYYY-MM-DD形式で入力してください"}
 
 // TransactionService は取引の作成・更新・削除・一覧取得と複式簿記のバリデーションを実装する。
 type TransactionService interface {
@@ -86,7 +89,7 @@ func (s *transactionService) Create(ctx context.Context, req *dto.TransactionReq
 
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		return nil, errors.New("invalid date format, use YYYY-MM-DD")
+		return nil, errInvalidDate
 	}
 
 	var transactionID uint
@@ -124,7 +127,7 @@ func (s *transactionService) Update(ctx context.Context, id uint, req *dto.Trans
 
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		return nil, errors.New("invalid date format, use YYYY-MM-DD")
+		return nil, errInvalidDate
 	}
 
 	// 訂正理由が指定された場合は、既存の取引を書き換えず新しい訂正取引として記録する。

@@ -61,6 +61,13 @@ func (r *PostRepository) GetAll(ctx context.Context) ([]models.Post, error) {
 	return posts, err
 }
 
+// CountByCategoryID は指定のカテゴリに紐づく記事の件数を返す。
+func (r *PostRepository) CountByCategoryID(ctx context.Context, categoryID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Post{}).Where("category_id = ?", categoryID).Count(&count).Error
+	return count, err
+}
+
 // Update は既存の記事の行を上書きする。
 func (r *PostRepository) Update(ctx context.Context, post *models.Post) error {
 	return r.db.WithContext(ctx).Save(post).Error
