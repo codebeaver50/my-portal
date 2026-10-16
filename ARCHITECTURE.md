@@ -112,26 +112,16 @@ server/
   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
   ```
 
-## 管理者ログイン（ポートフォリオ共通）
-
-- 目的: 各featureは基本的に「誰でも編集・削除できる公開デモ」として作る方針だが、一部のfeature（例: `simple-cms`）は特定の操作を管理者（＝サイト運営者本人）限定にしたい。featureごとに認証を作らず、ポートフォリオ全体で共通の管理者ログインを1つ持ち、各featureはそれを参照するだけにする
-- 実装場所: `server/internal/admin/`（`internal/features/<feature-slug>/` の配下ではなく、`internal/db/` と同様のfeature非依存の共通処理として置く）
-  - `ADMIN_PASSWORD` 環境変数と照合し、一致すれば署名付きセッションCookie（`portal_admin_session`、HMAC署名・有効期限つき、DBには保存しないステートレスな方式）を発行する
-  - `POST /api/admin/login` / `POST /api/admin/logout` / `GET /api/admin/session` の3エンドポイントを `admin.RegisterRoutes` で登録する（`cmd/api/main.go` から呼ぶ）
-  - `admin.AuthMiddleware()` を各featureの管理者限定エンドポイントに付与する（例: `simple-cms` の記事・カテゴリの作成/更新/削除）
-- フロントエンド側: `app/_lib/adminAuth.ts` の `checkIsAdmin()`（Server Component専用、Cookieを中継して`GET /api/admin/session`を叩く）を各featureのページ・レイアウトから呼び、管理者向けUIを出すかどうかを判断する
-  - 専用のログインページ（旧 `/login`）は削除した。後述のアクセス管理（RBAC）へ置き換えるまでのあいだ、`ADMIN_PASSWORD` でログインする画面はなく、`simple-cms` の管理画面は未ログインだと `/demo-portal/login` へ送られる
-- 新しいfeatureで管理者限定の操作を追加する場合は、featureごとに認証を作らず、この共通の `admin.AuthMiddleware()` / `checkIsAdmin()` を再利用すること
-
 ## アクセス管理（RBAC、構築中）
 
-- 目的: 商用システム並みのアクセス管理をポートフォリオとして示す。ユーザーにロールを割り当て、ロールごとにリソース（feature・アクセス管理画面）への権限レベルを設定する。前述の「管理者ログイン（`ADMIN_PASSWORD`）」は最終的にこの仕組みへ置き換える（現時点では併存）
+- 目的: 商用システム並みのアクセス管理をポートフォリオとして示す。ユーザーにロールを割り当て、ロールごとにリソース（feature・アクセス管理画面）への権限レベルを設定する。以前の `ADMIN_PASSWORD` による管理者ログイン（`internal/admin`、HMAC署名Cookie）はこの仕組みに置き換えて削除した。featureで特定の操作を限定したい場合は、featureごとに認証を作らず、このアクセス管理の権限（`middleware.Require` / フロントエンドのセッション）を使うこと
 - 実装場所: `server/internal/accesscontrol/`（feature非依存の共通処理だが、今後ユーザー・ロールの管理APIも載せるため、featureと同じ `controller` / `service` / `repository` / `dto` / `router` 構成にしている）
   - `permission/`: リソースの一覧（`Resources`）と権限レベル（`none` < `read` < `write`、writeはreadを含む）の純粋な定義。リソースはNext.js側のfeature-slugと揃え、featureを追加したらここにも追加する。書き込み操作のないリソース（`shop-css`）は `MaxLevel` を `read` にする
   - `middleware/`: `Authenticate(authSvc)` がセッションCookieから主体（`service.Principal`）を解決してGinのコンテキストに入れ、`Require(resource, level)` が権限をチェックする。権限不足は、未ログインなら`401`、ログイン済みなら`403`
 - featureの権限チェック
   - Go側（正）: 各featureの `router` で、書き込み系のルートだけをまとめたグループに `middleware.Authenticate(authSvc)` と `middleware.Require(<リソース>, permission.Write)` を付ける。`authSvc` は `cmd/api/main.go` で `accesscontrolrouter.SetupAuthRoutes` の戻り値を各featureの `SetupXxxRoutes` に渡す。現在対象にしているのは `simple-ledger`（取引の作成・更新・削除）と `form-builder`（フォーム・回答の作成・更新・削除）。読み取り系（`GET`）には付けていない（SSR時のサーバー間通信がCookieを持たないため。ゲストロールには全featureの `read` を付けている）
-  - `simple-cms` は旧方式の `admin.AuthMiddleware()` のまま（`ADMIN_PASSWORD` 方式の置き換えとあわせて移行する）。`book-database` の書き込みは `CRON_SECRET` で保護した `/api/books/sync` のみ
+  - `simple-cms`（カテゴリ・記事の作成・更新・削除）も同様に `write` 権限を要求する。`book-database` の書き込みは `CRON_SECRET` で保護した `/api/books/sync` のみ
+  - `simple-cms` もほかのfeatureと同様に、記事の投稿・編集・カテゴリ管理の画面は誰でも開いて操作を試せ、保存・削除のボタンだけを `write` 権限がない場合に押せなくする
   - フロントエンド側（表示の切り替えのみ）: **`read` 権限は「画面の操作は試せるが、保存・削除はできない」として扱う**。作成・編集の画面やダイアログは誰でも開けるが、保存・削除・回答の送信ボタンだけを押せなくし、理由をツールチップで出す
     - `app/demo-portal/_lib/useSession.ts` の `useWriteBlockedReason(<リソース>, <操作名>)` が、`write` 権限がなければ理由（未ログインなら「保存するにはログインが必要です」、ログイン済みなら「保存する権限がありません」）を返し、それを `components/ui` の `Button` の `blockedReason` に渡す。セッションの取得中・取得失敗時も押せない側に倒す
     - `blockedReason` 付きの `Button` は `disabled` ではなく `aria-disabled` にする（`disabled` だとフォーカスもホバーのイベントも受け取れず、キーボード・スクリーンリーダー・ホバーで理由を伝えられないため）。クリックしても `onClick`・フォームの送信は行わない
@@ -174,7 +164,7 @@ server/
   - `app/demo-portal/_lib/auth.ts`: `login` / `logout` / `fetchSession`（Client Component用）と、セッションの型
   - デモポータルのヘッダー（`app/_components/SiteHeader.tsx`）には、自己紹介サイトのメニューの代わりにログイン中のユーザーとロール（未ログインなら「ゲスト」）とログイン/ログアウトの導線（`app/demo-portal/_components/AccountStatus.tsx`）を出す
 - 設計判断
-  - **セッションはDBに保存する**（`ADMIN_PASSWORD`方式のHMAC署名Cookieのようなステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
+  - **セッションはDBに保存する**（以前の `ADMIN_PASSWORD` 方式のようなHMAC署名Cookieのステートレス方式にしない）。行を削除すれば即座に無効化できるため、ユーザーの無効化・ロール変更・強制ログアウトをすぐ反映できる。Cookieには256ビットの乱数トークンを入れ、DBにはそのSHA-256だけを保存する（DBの内容が漏れてもセッションを乗っ取られない）。有効期限は7日。ログイン後に無効化されたユーザーのセッションはゲストとして扱う
   - CookieはHttpOnly・SameSite=Lax（本番のReleaseModeではSecureも付ける）。SameSite=LaxによりほかのサイトからのPOSTにCookieが付かないため、CSRFトークンは持たない
   - **ログインの失敗**: ログインIDが存在しない・パスワードが違う・ユーザーが無効化されている、はすべて同じ`401`にする（ログインIDの存在を推測させない）。存在しないログインIDでもbcryptの比較を1回行い、応答時間の差も出さない。5回連続で失敗するとそのアカウントを15分ロックし、ロック中は`429`を返す
   - パスワードは72文字まで（bcryptは72バイトを超える部分を無視するため）
@@ -203,7 +193,7 @@ server/
 - 目的: 各featureは基本的に「誰でも編集・削除できる公開デモ」（例: `simple-ledger`）として作る方針のため、本番でシードデータやデモデータをいたずらに書き換えられたくない場合に、書き込み系エンドポイントだけを丸ごと止められるようにしている
 - 挙動: `server/cmd/api/main.go` の `readOnlyMiddleware` がGinのグローバルミドルウェアとして登録されている。`READ_ONLY=true`（`.env.prod`）のとき、`GET`/`HEAD`/`OPTIONS`以外の全リクエスト（`POST`/`PUT`/`PATCH`/`DELETE`）を、除外リストに載っているルートを除いて`403`＋`{"error": "..."}`で拒否する。未設定・`false`のときは通常どおり書き込みを許可する
 - **除外ルール**: `cmd/api/main.go` の `readOnlyMiddleware(readOnly, "/api/books/sync")` の第2引数以降が除外パスのリスト。あるエンドポイントを除外してよいかどうかは以下で判断する
-  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/admin/login`・`/api/admin/logout`・`/api/auth/login`・`/api/auth/logout`（ログイン処理自体。セッションを書き込むがデモデータは変更しない）と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「管理者ログイン（ポートフォリオ共通）」の`admin.AuthMiddleware`付き）
+  - ✅ 除外してよい（認可あり）: ブラウザ経由でユーザーが直接叩けない（cronや管理者のみが`Authorization: Bearer <secret>`等の別の認可を使って呼ぶ）更新系エンドポイント。例: `/api/books/sync`（`CRON_SECRET`で保護された`CronAuthMiddleware`付き）、`/api/auth/login`・`/api/auth/logout`（ログイン処理自体。セッションを書き込むがデモデータは変更しない）と`simple-cms`の記事・カテゴリの作成/更新/削除（前述「アクセス管理（RBAC）」の `simple-cms` の `write` 権限で保護。サイト運営者が作成したアカウントだけが書き込める前提のため、ゲストロールには `simple-cms` の `write` を付けないこと）
   - ✅ 除外してよい（認可なし、DB/デモデータ非変更）: 認可のない公開エンドポイントでも、DB上のシードデータ・デモデータを一切変更せず、外部への副作用（メール送信等）のみを行うもの。例: `/api/contact`（`internal/contact`、問い合わせ内容をメール転送するだけでDBに書き込まない）。READ_ONLYの目的は「公開デモのシードデータ保護」であり、こうしたエンドポイントはその対象外になる
   - ❌ 除外してはいけない: フロントエンドの画面操作（ボタンクリック等）から到達する、認可のない**DB書き込みを伴う**公開エンドポイント。例: `simple-ledger`の取引作成・更新・削除
   - 新しいfeatureでcron専用・管理者専用の更新エンドポイントを追加した場合は、必ずそのエンドポイント自身にも認可（bearer tokenチェック等）を実装したうえで、`main.go`の除外リストに追記すること。DB/デモデータを変更する認可なしエンドポイントを除外リストに入れてはいけない
