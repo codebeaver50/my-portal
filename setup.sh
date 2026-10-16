@@ -151,18 +151,41 @@ fi
 
 # 5. 環境変数のファイル -----------------------------------------------------
 
-step "環境変数のファイル"
-copy_env() {
-  local src="$1" dest="$2"
-  if [ -f "$dest" ]; then
-    ok "$dest はあります（上書きしません）"
-  elif confirm "$src から $dest を作りますか？"; then
-    cp "$src" "$dest"
-    ok "$dest を作りました"
-  fi
+step "環境変数のファイル（.env）"
+if [ -f .env ]; then
+  ok ".env はあります（上書きしません）"
+elif confirm ".env.example からローカル用の .env を作りますか？"; then
+  # 問い合わせフォームのメールは、ローカルでは mailpit（docker-compose.yml）で受け取る
+  sed \
+    -e 's/^CONTACT_SMTP_HOST=$/CONTACT_SMTP_HOST=localhost/' \
+    -e 's/^CONTACT_SMTP_PORT=$/CONTACT_SMTP_PORT=1025/' \
+    -e 's/^CONTACT_SMTP_USERNAME=$/CONTACT_SMTP_USERNAME=contact/' \
+    -e 's/^CONTACT_SMTP_PASSWORD=$/CONTACT_SMTP_PASSWORD=contact/' \
+    -e 's/^CONTACT_FROM_EMAIL=$/CONTACT_FROM_EMAIL=no-reply@example.com/' \
+    -e 's/^CONTACT_TO_EMAIL=$/CONTACT_TO_EMAIL=test@example.com/' \
+    .env.example >.env
+  ok ".env を作りました（問い合わせメールは http://localhost:8025 の mailpit で確認できます）"
+fi
+# 以前は Next.js 用に .env.local、Go API 用に server/.env を分けて作っていた
+if [ -f .env.local ]; then
+  warn ".env.local は .env より優先して Next.js に読み込まれます。不要なら削除してください"
+fi
+if [ -f server/.env ]; then
+  warn "server/.env は使われなくなりました（ルートの .env を使います）。不要なら削除してください"
+fi
+
+# with_env コマンド... : .env を読み込んだうえで、server/ でコマンドを実行する
+# （Go API は .env を自動で読み込まないため）
+with_env() {
+  (
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+    cd server
+    "$@"
+  )
 }
-copy_env .env.example .env.local
-copy_env server/.env.example server/.env
 
 # 6. DB の起動とマイグレーション ---------------------------------------------
 
@@ -186,8 +209,8 @@ container_app() {
 
 if ! command -v docker >/dev/null 2>&1; then
   warn "docker コマンドがないため飛ばします"
-elif [ ! -f server/.env ]; then
-  warn "server/.env がないため飛ばします"
+elif [ ! -f .env ]; then
+  warn ".env がないため飛ばします"
 elif confirm "MySQL を起動して、マイグレーションを適用しますか？"; then
   if ! docker info >/dev/null 2>&1; then
     app="$(container_app)"
@@ -205,14 +228,7 @@ elif confirm "MySQL を起動して、マイグレーションを適用します
   fi
   # healthcheck が通る（MySQL が接続を受け付ける）まで待つ
   docker compose up -d --wait
-  (
-    cd server
-    set -a
-    # shellcheck disable=SC1091
-    source .env
-    set +a
-    go run ./cmd/migrate up
-  )
+  with_env go run ./cmd/migrate up
   db_ready=true
   ok "MySQL とマイグレーションの準備ができました"
 fi
@@ -225,15 +241,8 @@ if [ "$db_ready" = true ] && [ "$ASSUME_YES" = false ]; then
   if confirm "管理者アカウントを作成しますか？" n; then
     read -r -p "    ログインID: " login_id
     read -r -p "    表示名: " display_name
-    (
-      cd server
-      set -a
-      # shellcheck disable=SC1091
-      source .env
-      set +a
-      # パスワードは createuser が端末から入力を表示せずに読む
-      go run ./cmd/createuser -login "$login_id" -name "$display_name" -role admin
-    )
+    # パスワードは createuser が端末から入力を表示せずに読む
+    with_env go run ./cmd/createuser -login "$login_id" -name "$display_name" -role admin
   fi
 fi
 
@@ -244,7 +253,7 @@ cat <<'EOF'
     起動するには、2つのターミナルで次を実行してください。
 
       # Go API（http://localhost:8080）
-      cd server && set -a && source .env && set +a && go run ./cmd/api
+      set -a && source .env && set +a && cd server && go run ./cmd/api
 
       # Next.js（http://localhost:3000）
       npm run dev

@@ -16,7 +16,8 @@
 # GHCRのパッケージ（ghcr.io/codebeaver50/my-portal-web, -api）は初回push後に
 # Public に設定しておくこと（Lightsail側でdocker loginせずにpullできるようにするため）。
 #
-# .env.prod（git管理しない）に以下を定義する:
+# .env.prod（git管理しない）は、ルートの .env.example をコピーして作り、「共通」「本番のみ」の
+# 節の値を設定する（「ローカルのみ」の節は使われない）。主なキー:
 #   DOMAIN=example.com
 #   MYSQL_ROOT_PASSWORD=...
 #   MYSQL_PASSWORD=...

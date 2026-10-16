@@ -16,7 +16,7 @@ macOS（Apple Silicon）と [Homebrew](https://brew.sh/) を前提にする。�
 | コンテナの実行環境（ローカルの MySQL 用） | なし（Docker Desktop と Rancher Desktop のどちらでもよい） | 各自で入れる |
 | バージョンを揃えるもの（Node.js・Go・golangci-lint） | `.nvmrc`（Node.js）・`.prototools`（Go・golangci-lint） | `proto install` |
 
-以下の手順 1〜3 は、`./setup.sh` で対話的に進めることもできる。各手順の前に確認し、済んでいる手順は飛ばす（何度実行してもよい。`.env` 等の既存のファイルは上書きしない）。`./setup.sh -y` で確認せずに進める。
+以下の手順 1〜3 は、`./setup.sh` で対話的に進めることもできる。各手順の前に確認し、済んでいる手順は飛ばす（何度実行してもよい。既存の `.env` は上書きしない）。`./setup.sh -y` で確認せずに進める。
 
 ```bash
 git clone https://github.com/codebeaver50/my-portal.git
@@ -43,11 +43,14 @@ npm ci
 ### 2. 環境変数のファイルを作る
 
 ```bash
-cp .env.example .env.local               # Next.js 用
-cp server/.env.example server/.env       # Go API 用（ローカルでは値を変えずに使える）
+cp .env.example .env
 ```
 
-どちらも git の管理外。本番用の `.env.prod` は Lightsail Instance 上にだけ置く。
+`.env.example` には、ローカルと本番の両方のキーが「共通」「ローカルのみ」「本番のみ」の節に分けて書いてある。ローカルでは値を変えずに使える（問い合わせフォームのメールを mailpit で確認したい場合は、`.env.example` のコメントにある `CONTACT_SMTP_*` の値を入れる。`./setup.sh` で作るとこの値が入る）。
+
+Next.js は `.env` を自動で読み込むが、Go API は読み込まないため、`go run` の前に `set -a; source .env; set +a` で環境変数にする。
+
+`.env` は git の管理外。本番では、同じ `.env.example` をコピーして Lightsail Instance 上に `.env.prod` を作る。
 
 ### 3. DB を起動してマイグレーションを適用する
 
@@ -56,8 +59,8 @@ Docker Desktop か Rancher Desktop を起動してから実行する。
 ```bash
 docker compose up -d                     # MySQL と mailpit（問い合わせメールの確認用）
 
-cd server
 set -a; source .env; set +a
+cd server
 go run ./cmd/migrate up
 ```
 
@@ -65,8 +68,8 @@ go run ./cmd/migrate up
 
 ```bash
 # ターミナル1: Go API（http://localhost:8080）
-cd server
 set -a; source .env; set +a
+cd server
 go run ./cmd/api
 
 # ターミナル2: Next.js（http://localhost:3000）
