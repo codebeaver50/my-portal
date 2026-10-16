@@ -88,6 +88,7 @@ server/
 
 ## ローカル開発
 
+- セットアップの手順は `README.md` を参照。Node.js・Go・golangci-lint のバージョンは proto（`.nvmrc` / `.prototools`）で揃え、proto と Docker Desktop は `Brewfile` で入れる
 - MySQLは `docker-compose.yml` でコンテナ起動する（`docker compose up -d`）。ホストへのMySQLインストールは不要
 - Next.js・Goはどちらもコンテナ化せず、ホスト上でネイティブ実行する（`npm run dev` / `go run ./cmd/api`）。コード変更のたびにイメージを再ビルドする必要がなく開発サイクルが速いため
 - 接続情報（ユーザー: `app` / パスワード: `app` / DB名: `my_portal` / ポート: `3306`）は開発用の固定値。本番の値とは別物
