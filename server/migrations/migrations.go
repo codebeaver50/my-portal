@@ -1,5 +1,5 @@
-// Package migrations embeds the SQL migration files so they ship inside the
-// compiled binary (no separate migrate CLI or file bundle needed at deploy time).
+// Package migrations はSQLマイグレーションのファイルをバイナリに埋め込む。
+// デプロイ時に、マイグレーション用のCLIやSQLファイルを別に配置しなくて済むようにするため。
 package migrations
 
 import "embed"

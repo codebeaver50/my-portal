@@ -25,8 +25,8 @@ func TestIsReadOnly(t *testing.T) {
 }
 
 func TestReadOnlyMiddleware(t *testing.T) {
-	// /x represents an ordinary user-facing write route; /api/books/sync
-	// mirrors the cron-only sync route that main() exempts.
+	// /x はユーザーの操作から呼ばれる通常の書き込みのルート、/api/books/sync は
+	// main() で除外している cron 専用の同期処理のルートを表す。
 	newEngine := func(enabled bool, exemptPaths ...string) *gin.Engine {
 		r := gin.New()
 		r.Use(readOnlyMiddleware(enabled, exemptPaths...))

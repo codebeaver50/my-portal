@@ -1,6 +1,6 @@
-// Command migrate applies (or rolls back) the SQL migrations embedded in
-// server/migrations against DATABASE_URL. Used the same way locally and on
-// Railway, so there's no separate CLI tool to install.
+// Command migrate は server/migrations に埋め込んだSQLマイグレーションを、
+// DATABASE_URL のDBに適用する（または取り消す）。ローカルでも本番でも同じように
+// 実行でき、マイグレーション用のCLIを別途インストールする必要がない。
 package main
 
 import (
