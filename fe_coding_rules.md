@@ -12,7 +12,25 @@
 - [Google TypeScript Style Guide](https://google.github.io/styleguide/tsguide.html)
 - Next.js 16 の公式ドキュメント（`node_modules/next/dist/docs/`）。学習データの知識と異なる部分があるため、APIを使う前に確認する
 
-機械的にチェックできるものは ESLint（`npm run lint`）・TypeScript の `strict` に任せる。
+機械的にチェックできるものは ESLint（`npm run lint`）・TypeScript の `strict` に任せる。CI（`.github/workflows/ci.yml`）でも `npm run lint` を実行し、error のルールに違反するとCIが失敗する。
+
+### Lint で強制しているルール
+
+`eslint.config.mjs` で、このドキュメントのうち以下のルールを error にしている。ルールを追加・変更した場合は、このドキュメントと `eslint.config.mjs` の両方を揃える。
+
+| ルール | ESLint のルール |
+|---|---|
+| `interface` ではなく `type` を使う | `@typescript-eslint/consistent-type-definitions` |
+| `enum` を使わない | `no-restricted-syntax`（`TSEnumDeclaration`） |
+| `any` を使わない | `@typescript-eslint/no-explicit-any` |
+| 型だけの読み込みは `import type`（行を分ける） | `@typescript-eslint/consistent-type-imports` / `import/consistent-type-specifier-style` |
+| default export は Next.js が要求するファイルだけ | `import/no-default-export`（`page` / `layout` 等を除く） |
+| feature から別の feature を import しない | `import/no-restricted-paths` |
+| useEffect の依存配列をごまかさない | `react-hooks/exhaustive-deps` |
+| useEffect の中で同期的に `setState` しない | `react-hooks/set-state-in-effect` |
+| 不要になった `eslint-disable` を残さない | `linterOptions.reportUnusedDisableDirectives` |
+
+`eslint-disable` に理由のコメントがあるかは Lint では確認していないため、コードレビューで確認する。
 
 ## TypeScript
 
@@ -170,10 +188,10 @@ const { data: accounts = [] } = useChartOfAccounts();
 
 #### Lint による検出
 
-`eslint-config-next` に含まれる `eslint-plugin-react-hooks` v7 で、以下がすでに有効になっている。
+`eslint-plugin-react-hooks` v7（`eslint-config-next` に含まれる）の以下のルールを error にしている。
 
-- `react-hooks/set-state-in-effect`（error）: `useEffect` の中で同期的に `setState` する（禁止パターン 1・2・4 の多く）を検出する
-- `react-hooks/exhaustive-deps`（warn）: 依存配列の漏れを検出する
+- `react-hooks/set-state-in-effect`: `useEffect` の中で同期的に `setState` する（禁止パターン 1・2・4 の多く）を検出する
+- `react-hooks/exhaustive-deps`: 依存配列の漏れを検出する
 
 禁止パターン 3・5・6 のように、Lint では検出できないものはコードレビューで確認する。
 
