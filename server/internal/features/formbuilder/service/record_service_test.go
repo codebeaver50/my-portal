@@ -93,7 +93,7 @@ func TestRecordService_Create(t *testing.T) {
 			keys[models.RadioField]:    "たぶん",
 			keys[models.CheckboxField]: []any{"X", "W"},
 		}})
-		validationErr := assertValidationError(t, err)
+		validationErr := requireValidationError(t, err)
 
 		for _, fieldType := range []models.FieldType{
 			models.TextField, models.NumberField, models.EmailField, models.DateField,

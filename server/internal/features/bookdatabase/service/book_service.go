@@ -21,7 +21,7 @@ const PageSize = 20
 type BookService interface {
 	List(ctx context.Context, skip int) (*dto.ListBooksResponse, error)
 	GetCoverImageURL(ctx context.Context, bookID int64) (string, error)
-	FetchCoverImage(sourceURL string) (*http.Response, error)
+	FetchCoverImage(ctx context.Context, sourceURL string) (*http.Response, error)
 }
 
 type bookService struct {
@@ -103,14 +103,18 @@ const minFetchInterval = 500 * time.Millisecond
 
 var defaultCoverThrottle = &coverThrottle{}
 
+// coverHTTPClient は取得元が応答しない場合に、カバー画像のリクエストとスロットリングの
+// ロックを持ったまま止まり続けないよう、タイムアウトを設定する。
+var coverHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
 // FetchCoverImage はカバー画像を取得元URLからフェッチする。共有の
 // デフォルトレート制限でスロットリングする。NDLのサムネイルサーバーは
 // Refererが自ドメインでないリクエストを拒否するため、ここで設定する。
-func (s *bookService) FetchCoverImage(sourceURL string) (*http.Response, error) {
-	return defaultCoverThrottle.get(sourceURL)
+func (s *bookService) FetchCoverImage(ctx context.Context, sourceURL string) (*http.Response, error) {
+	return defaultCoverThrottle.get(ctx, sourceURL)
 }
 
-func (t *coverThrottle) get(sourceURL string) (*http.Response, error) {
+func (t *coverThrottle) get(ctx context.Context, sourceURL string) (*http.Response, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -119,12 +123,12 @@ func (t *coverThrottle) get(sourceURL string) (*http.Response, error) {
 	}
 	t.lastFetchAt = time.Now()
 
-	req, err := http.NewRequest(http.MethodGet, sourceURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sourceURL, nil)
 	if err != nil {
 		return nil, err
 	}
 	if origin, err := url.Parse(sourceURL); err == nil {
 		req.Header.Set("Referer", origin.Scheme+"://"+origin.Host+"/")
 	}
-	return http.DefaultClient.Do(req)
+	return coverHTTPClient.Do(req)
 }

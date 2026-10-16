@@ -22,7 +22,7 @@ func SetupSimpleCmsRoutes(apiGroup *gin.RouterGroup, db *gorm.DB, authSvc acserv
 	categoryRepo := repository.NewCategoryRepository(db)
 	postRepo := repository.NewPostRepository(db)
 
-	categorySvc := service.NewCategoryService(categoryRepo)
+	categorySvc := service.NewCategoryService(categoryRepo, postRepo)
 	postSvc := service.NewPostService(postRepo, categoryRepo)
 
 	categoryCtrl := controller.NewCategoryController(categorySvc)

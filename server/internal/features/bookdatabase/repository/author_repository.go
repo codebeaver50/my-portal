@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -27,7 +28,7 @@ func (r *AuthorRepository) WithTx(tx *gorm.DB) *AuthorRepository {
 func (r *AuthorRepository) FindByName(ctx context.Context, name string) (*models.Author, error) {
 	var author models.Author
 	err := r.db.WithContext(ctx).Where("name = ?", name).First(&author).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

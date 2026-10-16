@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+
 	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/ndl"
 	"github.com/codebeaver50/my-portal/server/internal/features/bookdatabase/openbd"
 )
@@ -8,13 +10,13 @@ import (
 // NDLClient は SyncService が依存するNDL Search SRU APIの操作を抽象化する。
 // テストではネットワークアクセスなしのフェイクに差し替えられる。
 type NDLClient interface {
-	SearchSru(query string, startRecord, maximumRecords int) (*ndl.SearchResult, error)
+	SearchSru(ctx context.Context, query string, startRecord, maximumRecords int) (*ndl.SearchResult, error)
 }
 
 // OpenBDClient は SyncService が依存するopenBDのカバー画像検索を抽象化する。
 // テストではネットワークアクセスなしのフェイクに差し替えられる。
 type OpenBDClient interface {
-	FetchCovers(isbn13List []string) (map[string]string, error)
+	FetchCovers(ctx context.Context, isbn13List []string) (map[string]string, error)
 }
 
 type defaultNDLClient struct{}
@@ -24,8 +26,8 @@ func NewNDLClient() NDLClient {
 	return defaultNDLClient{}
 }
 
-func (defaultNDLClient) SearchSru(query string, startRecord, maximumRecords int) (*ndl.SearchResult, error) {
-	return ndl.SearchSru(query, startRecord, maximumRecords)
+func (defaultNDLClient) SearchSru(ctx context.Context, query string, startRecord, maximumRecords int) (*ndl.SearchResult, error) {
+	return ndl.SearchSru(ctx, query, startRecord, maximumRecords)
 }
 
 type defaultOpenBDClient struct{}
@@ -35,6 +37,6 @@ func NewOpenBDClient() OpenBDClient {
 	return defaultOpenBDClient{}
 }
 
-func (defaultOpenBDClient) FetchCovers(isbn13List []string) (map[string]string, error) {
-	return openbd.FetchCovers(isbn13List)
+func (defaultOpenBDClient) FetchCovers(ctx context.Context, isbn13List []string) (map[string]string, error) {
+	return openbd.FetchCovers(ctx, isbn13List)
 }

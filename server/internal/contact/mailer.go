@@ -2,6 +2,7 @@ package contact
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/smtp"
 	"os"
@@ -46,7 +47,7 @@ func (m *smtpMailer) configured() bool {
 
 func (m *smtpMailer) Send(name, email, message string) error {
 	if !m.configured() {
-		return fmt.Errorf("contact: CONTACT_SMTP_* / CONTACT_FROM_EMAIL / CONTACT_TO_EMAIL is not fully configured")
+		return errors.New("contact: CONTACT_SMTP_* / CONTACT_FROM_EMAIL / CONTACT_TO_EMAIL is not fully configured")
 	}
 
 	auth := smtp.PlainAuth("", m.username, m.password, m.host)

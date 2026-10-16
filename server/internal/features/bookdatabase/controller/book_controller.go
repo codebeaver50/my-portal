@@ -69,7 +69,7 @@ func (ctrl *bookController) Cover() gin.HandlerFunc {
 			return
 		}
 
-		resp, err := ctrl.service.FetchCoverImage(coverImageURL)
+		resp, err := ctrl.service.FetchCoverImage(c.Request.Context(), coverImageURL)
 		if err != nil {
 			log.Printf("books: cover fetch failed: %v", err)
 			c.Status(http.StatusBadGateway)
@@ -89,6 +89,9 @@ func (ctrl *bookController) Cover() gin.HandlerFunc {
 		c.Header("Content-Type", contentType)
 		c.Header("Cache-Control", "public, max-age=86400")
 		c.Status(http.StatusOK)
-		io.Copy(c.Writer, resp.Body)
+		// ヘッダーは送信済みでステータスを変えられないため、ログに出すだけにする
+		if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+			log.Printf("books: copy cover image failed: %v", err)
+		}
 	}
 }

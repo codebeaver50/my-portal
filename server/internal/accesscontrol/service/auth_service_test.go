@@ -202,7 +202,7 @@ func TestAuthService_Login(t *testing.T) {
 		user := f.createUser(t, "alice")
 
 		for i := 0; i < MaxFailedLogins-1; i++ {
-			f.login("alice", "wrong")
+			_, _, _ = f.login("alice", "wrong") // 失敗させてカウントを増やすことだけが目的
 		}
 		if _, _, err := f.login("alice", testPassword); err != nil {
 			t.Fatalf("err = %v", err)

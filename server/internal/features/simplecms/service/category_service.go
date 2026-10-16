@@ -24,12 +24,13 @@ type CategoryService interface {
 }
 
 type categoryService struct {
-	repo *repository.CategoryRepository
+	repo     *repository.CategoryRepository
+	postRepo *repository.PostRepository
 }
 
 // NewCategoryService は指定のrepositoryを使う CategoryService を作成する。
-func NewCategoryService(repo *repository.CategoryRepository) CategoryService {
-	return &categoryService{repo: repo}
+func NewCategoryService(repo *repository.CategoryRepository, postRepo *repository.PostRepository) CategoryService {
+	return &categoryService{repo: repo, postRepo: postRepo}
 }
 
 func (s *categoryService) checkSlugAvailable(ctx context.Context, slug string, excludeID uint) error {
@@ -92,7 +93,14 @@ func (s *categoryService) Delete(ctx context.Context, id uint) error {
 	if existing == nil {
 		return ErrCategoryNotFound
 	}
-	// 記事が紐づいている場合はFKのON DELETE RESTRICTによりDBエラーが返る。
+	// FKのON DELETE RESTRICTでもDBエラーになるが、ほかのDBエラーと区別して409を返すため先に確認する
+	postCount, err := s.postRepo.CountByCategoryID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if postCount > 0 {
+		return ErrCategoryInUse
+	}
 	return s.repo.Delete(ctx, id)
 }
 

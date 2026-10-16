@@ -72,7 +72,7 @@ func main() {
 	authSvc := accesscontrolrouter.SetupAuthRoutes(apiGroup, conn)
 	accesscontrolrouter.SetupAccessControlRoutes(apiGroup, conn, authSvc)
 	contact.RegisterRoutes(apiGroup)
-	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
+	bookdatabaserouter.SetupBookRoutes(apiGroup, conn, os.Getenv("CRON_SECRET"))
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn, authSvc)
 	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn, authSvc)
 	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn, authSvc)
@@ -108,8 +108,8 @@ func handleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
-// isReadOnly parses the READ_ONLY env var. Any value other than "true" or
-// "1" (case-insensitive) is treated as disabled.
+// isReadOnly は環境変数 READ_ONLY の値を解釈する。"true" か "1"（大文字小文字を
+// 区別しない）以外の値は、すべて無効として扱う。
 func isReadOnly(value string) bool {
 	switch strings.ToLower(value) {
 	case "true", "1":
@@ -119,12 +119,11 @@ func isReadOnly(value string) bool {
 	}
 }
 
-// readOnlyMiddleware rejects write requests across the whole API when
-// enabled, so a public demo deployment can't have its seed data mutated by
-// visitors. GET/HEAD/OPTIONS (and CORS preflight, already handled by
-// corsMiddleware) always pass through, as does any route listed in
-// exemptPaths — for routes that write but aren't triggered by a user (e.g. a
-// cron-only sync job gated by its own auth).
+// readOnlyMiddleware は、有効な場合にAPI全体の書き込み系リクエストを拒否する。
+// 公開デモで、訪問者にシードデータを書き換えられないようにするため。
+// GET/HEAD/OPTIONS（CORSのプリフライトは corsMiddleware で処理済み）は常に通す。
+// exemptPaths に載せたルートも通す。ユーザーの操作からは呼ばれない、別の認可で
+// 保護された書き込み（cron専用の同期処理等）のためのもの。
 func readOnlyMiddleware(enabled bool, exemptPaths ...string) gin.HandlerFunc {
 	exempt := make(map[string]bool, len(exemptPaths))
 	for _, path := range exemptPaths {

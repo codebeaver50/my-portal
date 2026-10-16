@@ -73,13 +73,17 @@ func (ctrl *transactionController) Create() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req dto.TransactionRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 
 		result, err := ctrl.service.Create(c.Request.Context(), &req)
+		if writeValidationError(c, err) {
+			return
+		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-ledger: create transaction failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusCreated, result)
@@ -97,7 +101,7 @@ func (ctrl *transactionController) Update() gin.HandlerFunc {
 
 		var req dto.TransactionRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 
@@ -106,8 +110,12 @@ func (ctrl *transactionController) Update() gin.HandlerFunc {
 			c.Status(http.StatusNotFound)
 			return
 		}
+		if writeValidationError(c, err) {
+			return
+		}
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			log.Printf("simple-ledger: update transaction failed: %v", err)
+			c.Status(http.StatusInternalServerError)
 			return
 		}
 		c.JSON(http.StatusOK, result)

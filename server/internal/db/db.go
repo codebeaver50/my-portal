@@ -1,4 +1,4 @@
-// Package db opens the shared GORM connection.
+// Package db は全featureで共有するGORMのDB接続を開く。
 package db
 
 import (
@@ -12,18 +12,16 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Open connects using a DATABASE_URL of the form
-// "mysql://user:password@tcp(host:port)/dbname" (same value used by
-// server/cmd/migrate).
+// Open は "mysql://user:password@tcp(host:port)/dbname" 形式の DATABASE_URL
+// （server/cmd/migrate と同じ値）でDBに接続する。
 func Open(databaseURL string) (*gorm.DB, error) {
 	dsn := toDSN(databaseURL)
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: newLogger()})
 }
 
-// newLogger mirrors GORM's default logger, except it doesn't log
-// gorm.ErrRecordNotFound as an error: find-or-create lookups (e.g.
-// resolving a publisher/author by name) routinely miss, and the caller
-// already handles that as a normal not-found result.
+// newLogger はGORMのデフォルトのロガーと同じ設定で、gorm.ErrRecordNotFound だけを
+// エラーとしてログに出さないようにする。出版社・著者の名前での検索のように、
+// 見つからないことが通常の結果として扱われる検索が頻繁にあるため。
 func newLogger() logger.Interface {
 	return logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
 		SlowThreshold:             200 * time.Millisecond,
@@ -33,10 +31,10 @@ func newLogger() logger.Interface {
 	})
 }
 
-// toDSN strips the "mysql://" scheme go-sql-driver doesn't expect, ensures
-// parseTime is enabled so DATETIME columns scan into time.Time, and pins the
-// connection charset to utf8mb4 (without it the connection can negotiate a
-// different charset and mangle non-ASCII text on read/write).
+// toDSN は go-sql-driver が受け付けない "mysql://" を取り除き、DSNに変換する。
+// DATETIME の列を time.Time として読み込むため parseTime を有効にする。また、接続の
+// 文字コードを utf8mb4 に固定する（指定しないと別の文字コードで接続され、日本語等の
+// ASCII以外の文字が読み書きで化けることがあるため）。
 func toDSN(databaseURL string) string {
 	dsn := strings.TrimPrefix(databaseURL, "mysql://")
 	sep := "?"

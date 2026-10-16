@@ -1,0 +1,99 @@
+# golangci-lint の設定。golang_coding_rules.md の「Lint で強制しているルール」と揃える。
+version: "2"
+
+linters:
+  # standard: errcheck / govet / ineffassign / staticcheck / unused
+  default: standard
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - forbidigo
+    - noctx
+    - perfsprint
+  settings:
+    depguard:
+      # feature から別の feature のパッケージを import しない。feature を追加したら、
+      # そのfeatureのルールを足し、既存のルールの deny にも追加する。
+      rules:
+        bookdatabase:
+          files: ["**/internal/features/bookdatabase/**"]
+          deny:
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
+              desc: feature から別の feature を import しない
+        formbuilder:
+          files: ["**/internal/features/formbuilder/**"]
+          deny:
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
+              desc: feature から別の feature を import しない
+        simplecms:
+          files: ["**/internal/features/simplecms/**"]
+          deny:
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simpleledger
+              desc: feature から別の feature を import しない
+        simpleledger:
+          files: ["**/internal/features/simpleledger/**"]
+          deny:
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/bookdatabase
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/formbuilder
+              desc: feature から別の feature を import しない
+            - pkg: github.com/codebeaver50/my-portal/server/internal/features/simplecms
+              desc: feature から別の feature を import しない
+    forbidigo:
+      forbid:
+        - pattern: ^panic$
+          msg: panic を使わず、エラーを返す
+        - pattern: ^os\.Getenv$
+          msg: 環境変数は cmd/ の main で読み、引数で渡す
+        - pattern: ^http\.DefaultClient$
+          msg: Timeout を設定した http.Client を使う
+    perfsprint:
+      # 書式の指定がない fmt.Errorf だけを検出する（errors.New を使う）
+      integer-format: false
+      error-format: true
+      string-format: false
+      bool-format: false
+      hex-format: false
+      errorf: true
+      sprintf1: false
+      strconcat: false
+  exclusions:
+    presets:
+      # defer resp.Body.Close() 等、戻り値のエラーを確認しないのが慣用のもの
+      - std-error-handling
+      - common-false-positives
+    rules:
+      # テストではリクエストのキャンセルを扱わないため、httptest.NewRequest を使ってよい
+      - path: _test\.go$
+        linters: [noctx]
+      # cmd/ は起動時の設定として環境変数を読む
+      - path: ^cmd/
+        linters: [forbidigo]
+        text: os\.Getenv
+      # 問い合わせメールの SMTP 設定は internal/contact で読む（golang_coding_rules.md の例外）
+      - path: ^internal/contact/
+        linters: [forbidigo]
+        text: os\.Getenv
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      # 「標準ライブラリ」「外部モジュール」「このモジュール」の3グループに分ける
+      local-prefixes:
+        - github.com/codebeaver50/my-portal/server

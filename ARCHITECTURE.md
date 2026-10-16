@@ -69,7 +69,7 @@ server/
 
 - [golang-migrate](https://github.com/golang-migrate/migrate) を使用。SQLファイル（up/down）を `server/migrations/` に置く。GORMの`AutoMigrate`は使わない（本番でのスキーマ変更を明示的なSQL＋レビュー可能な差分にするため）
 - `internal/models/` のGORM structは既存スキーマへのマッピング専用。struct定義を変更したときは対応するマイグレーションSQLも必ず追加する
-- マイグレーションファイルは `server/migrations/migrations.go` の `go:embed` でバイナリに埋め込む。本番（Railway）でも別途CLIを用意する必要がなく、`server/cmd/migrate` を実行するだけで適用できる
+- マイグレーションファイルは `server/migrations/migrations.go` の `go:embed` でバイナリに埋め込む。本番（Lightsail Instance）でも別途CLIを用意する必要がなく、`server/cmd/migrate` を実行するだけで適用できる（本番では `docker-compose.prod.yml` の `migrate` サービスとして実行する。後述「本番デプロイ（AWS Lightsail）」を参照）
 - 実行方法:
   ```bash
   cd server

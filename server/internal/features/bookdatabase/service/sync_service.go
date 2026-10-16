@@ -69,7 +69,7 @@ func (s *syncService) Sync(ctx context.Context) (*dto.SyncSummaryResponse, error
 	startRecord := 1
 
 	for {
-		result, err := s.ndlClient.SearchSru(query, startRecord, syncPageSize)
+		result, err := s.ndlClient.SearchSru(ctx, query, startRecord, syncPageSize)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,7 @@ func (s *syncService) Sync(ctx context.Context) (*dto.SyncSummaryResponse, error
 		}
 
 		isbnsMissingCover := uniqueISBNsMissingCover(parsedRecords)
-		openBDCovers, err := s.openBDClient.FetchCovers(isbnsMissingCover)
+		openBDCovers, err := s.openBDClient.FetchCovers(ctx, isbnsMissingCover)
 		if err != nil {
 			return nil, err
 		}

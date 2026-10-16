@@ -70,7 +70,7 @@ func (ctrl *formController) Create() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req dto.FormRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 
@@ -98,7 +98,7 @@ func (ctrl *formController) Update() gin.HandlerFunc {
 
 		var req dto.FormRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "入力内容を確認してください"})
 			return
 		}
 

@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -46,7 +47,7 @@ func (r *BookRepository) List(ctx context.Context, skip, take int) ([]models.Boo
 func (r *BookRepository) GetByID(ctx context.Context, id int64) (*models.Book, error) {
 	var book models.Book
 	err := r.db.WithContext(ctx).First(&book, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -63,7 +64,7 @@ func (r *BookRepository) FindByISBN13(ctx context.Context, isbn13 *string) (*mod
 	}
 	var book models.Book
 	err := r.db.WithContext(ctx).Where("isbn13 = ?", *isbn13).First(&book).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -100,7 +101,7 @@ func (r *BookRepository) FindSource(ctx context.Context, sourceType models.Sourc
 	err := r.db.WithContext(ctx).
 		Where("source_type = ? AND source_id = ?", sourceType, sourceID).
 		First(&source).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

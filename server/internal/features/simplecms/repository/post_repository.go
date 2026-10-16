@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -31,7 +32,7 @@ func (r *PostRepository) Create(ctx context.Context, post *models.Post) error {
 func (r *PostRepository) GetByID(ctx context.Context, id uint) (*models.Post, error) {
 	var post models.Post
 	err := r.preload(r.db.WithContext(ctx)).First(&post, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -44,7 +45,7 @@ func (r *PostRepository) GetByID(ctx context.Context, id uint) (*models.Post, er
 func (r *PostRepository) GetBySlug(ctx context.Context, slug string) (*models.Post, error) {
 	var post models.Post
 	err := r.preload(r.db.WithContext(ctx)).Where("slug = ?", slug).First(&post).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -58,6 +59,13 @@ func (r *PostRepository) GetAll(ctx context.Context) ([]models.Post, error) {
 	var posts []models.Post
 	err := r.preload(r.db.WithContext(ctx)).Order("created_at DESC").Find(&posts).Error
 	return posts, err
+}
+
+// CountByCategoryID は指定のカテゴリに紐づく記事の件数を返す。
+func (r *PostRepository) CountByCategoryID(ctx context.Context, categoryID uint) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.Post{}).Where("category_id = ?", categoryID).Count(&count).Error
+	return count, err
 }
 
 // Update は既存の記事の行を上書きする。

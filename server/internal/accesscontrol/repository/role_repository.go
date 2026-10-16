@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -34,7 +35,7 @@ func (r *RoleRepository) GetAll(ctx context.Context) ([]models.Role, error) {
 func (r *RoleRepository) GetByID(ctx context.Context, id uint) (*models.Role, error) {
 	var role models.Role
 	err := r.db.WithContext(ctx).First(&role, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -47,7 +48,7 @@ func (r *RoleRepository) GetByID(ctx context.Context, id uint) (*models.Role, er
 func (r *RoleRepository) GetByCode(ctx context.Context, code string) (*models.Role, error) {
 	var role models.Role
 	err := r.db.WithContext(ctx).Where("code = ?", code).First(&role).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

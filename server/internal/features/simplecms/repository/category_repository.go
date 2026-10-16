@@ -3,6 +3,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 
@@ -28,7 +29,7 @@ func (r *CategoryRepository) Create(ctx context.Context, category *models.Catego
 func (r *CategoryRepository) GetByID(ctx context.Context, id uint) (*models.Category, error) {
 	var category models.Category
 	err := r.db.WithContext(ctx).First(&category, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
@@ -41,7 +42,7 @@ func (r *CategoryRepository) GetByID(ctx context.Context, id uint) (*models.Cate
 func (r *CategoryRepository) GetBySlug(ctx context.Context, slug string) (*models.Category, error) {
 	var category models.Category
 	err := r.db.WithContext(ctx).Where("slug = ?", slug).First(&category).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {

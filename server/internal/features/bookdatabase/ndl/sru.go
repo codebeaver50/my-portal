@@ -3,6 +3,7 @@
 package ndl
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"net/http"
@@ -17,6 +18,9 @@ const sruEndpoint = "https://ndlsearch.ndl.go.jp/api/sru"
 // 「検索負荷回避のための制約」により startRecord + maximumRecords は 501 を超えられない
 const maxRecordPosition = 500
 const maxRecordLimit = maxRecordPosition + 1
+
+// httpClient はNDLが応答しない場合にsyncのバッチが止まり続けないよう、タイムアウトを設定する。
+var httpClient = &http.Client{Timeout: 30 * time.Second}
 
 type sruRecord struct {
 	RecordData string `xml:"recordData"`
@@ -50,7 +54,7 @@ func BuildMonthlyNdcQuery(ndc string, yearMonth string) (string, error) {
 }
 
 // SearchSru は searchRetrieve リクエストを1回発行する。
-func SearchSru(query string, startRecord, maximumRecords int) (*SearchResult, error) {
+func SearchSru(ctx context.Context, query string, startRecord, maximumRecords int) (*SearchResult, error) {
 	if maxAllowed := maxRecordLimit - startRecord; maximumRecords > maxAllowed {
 		maximumRecords = maxAllowed
 	}
@@ -69,7 +73,11 @@ func SearchSru(query string, startRecord, maximumRecords int) (*SearchResult, er
 	q.Set("maximumRecords", strconv.Itoa(maximumRecords))
 	u.RawQuery = q.Encode()
 
-	resp, err := http.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

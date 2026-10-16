@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -39,7 +40,7 @@ func (r *FormRepository) Create(ctx context.Context, form *models.Form) error {
 func (r *FormRepository) GetByID(ctx context.Context, id uint) (*models.Form, error) {
 	var form models.Form
 	err := r.preload(r.db.WithContext(ctx)).First(&form, id).Error
-	if err == gorm.ErrRecordNotFound {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
 	if err != nil {
