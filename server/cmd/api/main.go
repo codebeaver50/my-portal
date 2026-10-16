@@ -47,9 +47,11 @@ func main() {
 	engine := gin.Default()
 	engine.Use(corsMiddleware(allowedOrigin))
 	// /api/books/sync はcron等からしか叩かれない（CronAuthMiddlewareで別途保護
-	// されている）バッチ更新、/api/admin/* とsimple-cmsのカテゴリ・記事の書き込み
-	// 系はadmin.AuthMiddleware/ログイン処理自体で保護されているため、どちらも
-	// ユーザー操作を止めるREAD_ONLYの対象外にする（管理者は本番でも操作できる）。
+	// されている）バッチ更新のため、READ_ONLYの対象外にする。
+	// simple-cmsのカテゴリ・記事の書き込み系は、アクセス管理（RBAC）の simple-cms の
+	// write 権限で保護されており、サイト運営者が作成したアカウント（管理者等）だけが
+	// 書き込めるため、本番でも操作できるよう対象外にする。ゲストロールには simple-cms の
+	// write を付けないこと（付けると READ_ONLY でも未ログインの訪問者が書き込めてしまう）。
 	// /api/auth/login・/api/auth/logout はセッションの行を書き込むが、デモデータを
 	// 変更しないうえ、止めると本番でログインできなくなるため対象外にする。
 	// /api/contact は認可のない公開エンドポイントだが、DB/デモデータを一切変更
@@ -76,7 +78,7 @@ func main() {
 	contact.RegisterRoutes(apiGroup)
 	bookdatabaserouter.SetupBookRoutes(apiGroup, conn)
 	simpleledgerrouter.SetupSimpleLedgerRoutes(apiGroup, conn, authSvc)
-	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn)
+	simplecmsrouter.SetupSimpleCmsRoutes(apiGroup, conn, authSvc)
 	formbuilderrouter.SetupFormBuilderRoutes(apiGroup, conn, authSvc)
 
 	port := os.Getenv("PORT")

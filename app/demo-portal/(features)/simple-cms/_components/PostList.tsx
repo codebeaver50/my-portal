@@ -10,7 +10,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
 }
 
-export function PostList({ initialPosts, isAdmin = false }: { initialPosts: Post[]; isAdmin?: boolean }) {
+export function PostList({ initialPosts, canWrite = false }: { initialPosts: Post[]; canWrite?: boolean }) {
   const { data: posts = initialPosts } = usePosts();
   const deleteMutation = useDeletePost();
   const { showToast } = useToast();
@@ -40,7 +40,7 @@ export function PostList({ initialPosts, isAdmin = false }: { initialPosts: Post
                 {post.category ? <Badge>{post.category.name}</Badge> : null}
                 <span className="text-xs text-muted-foreground">{formatDate(post.createdAt)}</span>
               </div>
-              {isAdmin ? (
+              {canWrite ? (
                 <div className="flex shrink-0 gap-2">
                   <LinkButton
                     href={`/demo-portal/simple-cms/edit/${post.slug}`}
