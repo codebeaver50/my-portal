@@ -1,0 +1,36 @@
+# golangci-lint を proto で入れるためのプラグイン（.prototools から読み込む）。
+# https://github.com/b4nst/proto-plugins/blob/main/toml/golangci-lint.toml をコピーしたもの。
+# 作者のリポジトリの変更を受けないよう、URLを直接参照せずリポジトリに置いている。
+# ダウンロード元は golangci-lint 公式の GitHub Releases で、チェックサムも検証する。
+
+# A TOML plugin for proto:
+# https://moonrepo.dev/docs/proto/plugins#toml-plugin
+
+name = "golangci-lint"
+type = "cli"
+
+[platform.macos]
+download-file = "golangci-lint-{version}-darwin-{arch}.tar.gz"
+checksum-file = "golangci-lint-{version}-checksums.txt"
+exe-path = "golangci-lint-{version}-darwin-{arch}/golangci-lint"
+
+[platform.linux]
+download-file = "golangci-lint-{version}-linux-{arch}.tar.gz"
+checksum-file = "golangci-lint-{version}-checksums.txt"
+exe-path = "golangci-lint-{version}-linux-{arch}/golangci-lint"
+
+[platform.windows]
+download-file = "golangci-lint-{version}-windows-{arch}.zip"
+checksum-file = "golangci-lint-{version}-checksums.txt"
+exe-path = "golangci-lint-{version}-windows-{arch}/golangci-lint.exe"
+
+[install]
+download-url = "https://github.com/golangci/golangci-lint/releases/download/v{version}/{download_file}"
+checksum-url = "https://github.com/golangci/golangci-lint/releases/download/v{version}/{checksum_file}"
+
+[install.arch]
+aarch64 = "arm64"
+x86_64 = "amd64"
+
+[resolve]
+git-url = "https://github.com/golangci/golangci-lint"

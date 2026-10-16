@@ -28,6 +28,25 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
+      # 手元（proto の .prototools）と CI でツールのバージョンを揃える
+      - name: Read tool versions from .prototools
+        id: versions
+        working-directory: ${{ github.workspace }}
+        run: |
+          # [settings] / [plugins] より前の行（バージョンの指定）だけを読む
+          tool_version() { awk -F'"' -v name="$1 = " '/^\[/ { exit } $1 == name { print $2 }' .prototools; }
+          go_proto=$(tool_version go)
+          go_mod=$(sed -n 's/^go \(.*\)$/\1/p' server/go.mod)
+          if [ "$go_proto" != "$go_mod" ]; then
+            echo "::error::.prototools の go ($go_proto) と server/go.mod の go ($go_mod) を揃えてください"
+            exit 1
+          fi
+          golangci_lint=$(tool_version golangci-lint)
+          if [ -z "$golangci_lint" ]; then
+            echo "::error::.prototools に golangci-lint のバージョンがありません"
+            exit 1
+          fi
+          echo "golangci-lint=$golangci_lint" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@v5
         with:
           go-version-file: server/go.mod
@@ -35,6 +54,6 @@ jobs:
       - run: go vet ./...
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.14.0
+          version: v${{ steps.versions.outputs.golangci-lint }}
           working-directory: server
       - run: go test ./...

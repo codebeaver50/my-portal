@@ -1,0 +1,14 @@
+# このプロジェクトで使うツールのバージョン（proto: https://moonrepo.dev/proto）。
+# `proto install` で、ここに書いたツールと .nvmrc の Node.js がまとめて入る。
+# Node.js は .nvmrc から読み込まれるため、ここには書かない。
+# go は server/go.mod の go ディレクティブと揃える（CI で確認している）。
+go = "1.25.4"
+golangci-lint = "2.14.0"
+
+[settings]
+# server/ では go.mod の go ディレクティブ（proto は「1.25.4以上」として扱う）より、
+# ここで固定したバージョンを優先する
+detect-strategy = "prefer-prototools"
+
+[plugins]
+golangci-lint = "file://./.proto/plugins/golangci-lint.toml"

@@ -13,6 +13,8 @@
 
 機械的にチェックできるものは [golangci-lint](https://golangci-lint.run/)（設定は `server/.golangci.yml`）に任せる。CI（`.github/workflows/ci.yml`）でも `go build` / `go vet` / `go test` とあわせて golangci-lint を実行し、違反があるとCIが失敗する。
 
+golangci-lint は proto で、CI と同じバージョン（`.prototools`）を入れる（`README.md` の「開発環境のセットアップ」を参照）。
+
 ```bash
 cd server
 golangci-lint run ./...   # チェック
