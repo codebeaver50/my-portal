@@ -14,7 +14,7 @@ macOS（Apple Silicon）と [Homebrew](https://brew.sh/) を前提にする。�
 |---|---|---|
 | Mac に1つあればよいもの（proto） | `Brewfile` | `brew bundle` |
 | コンテナの実行環境（ローカルの MySQL 用） | なし（Docker Desktop と Rancher Desktop のどちらでもよい） | 各自で入れる |
-| バージョンを揃えるもの（Node.js・Go・golangci-lint） | `.nvmrc`（Node.js）・`.prototools`（Go・golangci-lint） | `proto install` |
+| バージョンを揃えるもの（Node.js・Go・golangci-lint） | `.prototools`（Node.js は `.nvmrc` にも） | `proto install` |
 
 以下の手順 1〜3 は、`./setup.sh` で対話的に進めることもできる。各手順の前に確認し、済んでいる手順は飛ばす（何度実行してもよい。既存の `.env`・`server/.env` は上書きしない）。`./setup.sh -y` で確認せずに進める。
 
@@ -34,11 +34,11 @@ cd my-portal
 
 brew bundle      # proto
 proto setup      # 初回のみ。シェルの設定（PATH 等）を追加する。終わったらターミナルを開き直す
-proto install    # .nvmrc の Node.js と、.prototools の Go・golangci-lint
+proto install    # .prototools の Node.js・Go・golangci-lint
 npm ci
 ```
 
-`node --version`・`go version`・`golangci-lint --version` が、`.nvmrc`・`.prototools` のバージョンになっていることを確認する。
+`node --version`・`go version`・`golangci-lint --version` が、`.prototools` のバージョンになっていることを確認する。
 
 ### 2. 環境変数のファイルを作る
 
@@ -102,7 +102,7 @@ go test ./...
 
 | ツール | 変更するファイル |
 |---|---|
-| Node.js | `.nvmrc`（CI もここから読む） |
+| Node.js | `.prototools` の `node` と `.nvmrc` の**両方**（CI は `.nvmrc` から読む。揃っていないと CI が失敗する） |
 | Go | `.prototools` の `go` と `server/go.mod` の `go` の**両方**（揃っていないと CI が失敗する） |
 | golangci-lint | `.prototools` の `golangci-lint`（CI もここから読む） |
 
