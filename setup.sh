@@ -6,6 +6,8 @@
 #   ./setup.sh -y    確認せずにすべての手順を進める（管理者アカウントの作成だけは行わない）
 #
 # macOS 標準の bash 3.2 でも動くように書く（連想配列や ${var,,} 等は使わない）。
+# bash 3.2 は UTF-8 のロケールで "$var）" の全角文字の先頭バイトまで変数名として読むため、
+# 変数の直後に全角文字が続く場合は "${var}）" のように括る。
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -89,7 +91,7 @@ else
   esac
   if [ -n "$runtime_app" ]; then
     # 初回の起動時に、利用規約への同意やコンテナエンジンの選択が必要なため、ここでは自動で進めない
-    warn "「$runtime_app」を起動して初期設定を済ませてから、もう一度 ./setup.sh を実行してください"
+    warn "「${runtime_app}」を起動して初期設定を済ませてから、もう一度 ./setup.sh を実行してください"
     if [ "$runtime_app" = "Rancher Desktop" ]; then
       warn "Rancher Desktop の初期設定では、コンテナエンジンに「dockerd (moby)」を選んでください"
     fi
@@ -130,7 +132,7 @@ check_version() {
   if [ "$actual" = "$expected" ]; then
     ok "$name $actual"
   else
-    warn "$name が $actual です（期待するバージョン: $expected）。$(command -v "$name") が使われています。PATH で ~/.proto/shims が先になるようにしてください"
+    warn "$name が $actual です（期待するバージョン: ${expected}）。$(command -v "$name") が使われています。PATH で ~/.proto/shims が先になるようにしてください"
   fi
 }
 node_major="$(node --version | sed 's/^v\([0-9]*\).*/\1/')"
@@ -218,7 +220,7 @@ elif confirm "MySQL を起動して、マイグレーションを適用します
   if ! docker info >/dev/null 2>&1; then
     app="$(container_app)"
     if [ -n "$app" ]; then
-      info "コンテナの実行環境（$app）を起動しています..."
+      info "コンテナの実行環境（${app}）を起動しています..."
       open -a "$app"
     else
       info "コンテナの実行環境（Docker Desktop か Rancher Desktop）を起動してください。起動するまで待ちます..."
