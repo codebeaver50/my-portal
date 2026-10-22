@@ -6,6 +6,8 @@
 #   ./setup.sh -y    確認せずにすべての手順を進める（管理者アカウントの作成だけは行わない）
 #
 # macOS 標準の bash 3.2 でも動くように書く（連想配列や ${var,,} 等は使わない）。
+# bash 3.2 は UTF-8 のロケールで "$var）" の全角文字の先頭バイトまで変数名として読むため、
+# 変数の直後に全角文字が続く場合は "${var}）" のように括る。
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -89,7 +91,7 @@ else
   esac
   if [ -n "$runtime_app" ]; then
     # 初回の起動時に、利用規約への同意やコンテナエンジンの選択が必要なため、ここでは自動で進めない
-    warn "「$runtime_app」を起動して初期設定を済ませてから、もう一度 ./setup.sh を実行してください"
+    warn "「${runtime_app}」を起動して初期設定を済ませてから、もう一度 ./setup.sh を実行してください"
     if [ "$runtime_app" = "Rancher Desktop" ]; then
       warn "Rancher Desktop の初期設定では、コンテナエンジンに「dockerd (moby)」を選んでください"
     fi
@@ -118,23 +120,30 @@ export PATH="$PROTO_HOME/shims:$PROTO_HOME/bin:$PATH"
 
 # 3. Node.js・Go・golangci-lint --------------------------------------------
 
-step "Node.js・Go・golangci-lint（.nvmrc / .prototools）"
+step "Node.js・Go・golangci-lint（.prototools）"
 if confirm "proto install でバージョンを揃えますか？（入っているものは飛ばされます）"; then
   proto install
 fi
-# 別の方法で入れた同名のコマンドが PATH で先にあると、proto のバージョンにならないため確かめる
+# proto のバージョンになっているかを確かめる。食い違う原因は、使われているコマンドによって分かれる
+#   proto の shim 以外: 別の方法で入れた同名のコマンドが PATH で先にある
+#   proto の shim: 環境変数（PROTO_NODE_VERSION 等）の指定等で、proto が別のバージョンを選んでいる
 # （.prototools の [settings] / [plugins] より前の行がバージョンの指定）
 tool_version() { awk -F'"' -v name="$1 = " '/^\[/ { exit } $1 == name { print $2 }' .prototools; }
 check_version() {
-  local name="$1" expected="$2" actual="$3"
+  local name="$1" expected="$2" actual="$3" cmd_path
   if [ "$actual" = "$expected" ]; then
     ok "$name $actual"
+    return
+  fi
+  cmd_path="$(command -v "$name")"
+  if [ "$cmd_path" = "$PROTO_HOME/shims/$name" ]; then
+    warn "$name が $actual です（期待するバージョン: ${expected}）。proto が別の指定のバージョンを選んでいます。proto status の Config 列で、どこで指定されたバージョンかを確かめてください"
   else
-    warn "$name が $actual です（期待するバージョン: $expected）。$(command -v "$name") が使われています。PATH で ~/.proto/shims が先になるようにしてください"
+    warn "$name が $actual です（期待するバージョン: ${expected}）。${cmd_path} が使われています。PATH で ~/.proto/shims が先になるようにしてください"
   fi
 }
 node_major="$(node --version | sed 's/^v\([0-9]*\).*/\1/')"
-check_version node "$(cat .nvmrc)" "$node_major"
+check_version node "$(tool_version node)" "$node_major"
 check_version go "$(tool_version go)" "$(go env GOVERSION | sed 's/^go//')"
 check_version golangci-lint "$(tool_version golangci-lint)" "$(golangci-lint --version | awk '{print $4}')"
 
@@ -218,7 +227,7 @@ elif confirm "MySQL を起動して、マイグレーションを適用します
   if ! docker info >/dev/null 2>&1; then
     app="$(container_app)"
     if [ -n "$app" ]; then
-      info "コンテナの実行環境（$app）を起動しています..."
+      info "コンテナの実行環境（${app}）を起動しています..."
       open -a "$app"
     else
       info "コンテナの実行環境（Docker Desktop か Rancher Desktop）を起動してください。起動するまで待ちます..."
