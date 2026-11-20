@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Dockerイメージに .next/standalone だけをコピーして動かすための出力形式
   output: "standalone",
+  experimental: {
+    // next dev / next build で、セキュリティアドバイザリの対象になったときだけアップグレードを促す
+    agentUpgrade: "security",
+  },
   // featureは /demo-portal 配下へ移動した。旧URL（/<feature-slug>）へのリンク・ブックマークを新URLへ転送する
   async redirects() {
     return [
